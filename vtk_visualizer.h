@@ -11,20 +11,18 @@
 #include <vtkAutoInit.h>
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkRenderingFreeType);
-#include <vtkSmartPointer.h>
+VTK_MODULE_INIT(vtkInteractionStyle);
 
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkSmartPointer.h>
 #include <vtkCylinderSource.h>
 #include <vtkPolyDataMapper.h>
+#include <vtkParametricSpline.h>
+#include <vtkTubeFilter.h>
+#include <vtkParametricFunctionSource.h>
 #include <vtkActor.h>
-#include <vtkProperty.h>
 #include <vtkRenderer.h>
-#include <vtkNamedColors.h>
-#include <vtkNew.h>
-#include <vtkMatrix4x4.h>
-#include <vtkTransform.h>
-#include <vtkCamera.h>
 
 class VtkVisualizer
 {
@@ -34,7 +32,6 @@ public:
 
     QVTKOpenGLNativeWidget* getWidget();
     bool UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPose);
-    
 
 private:
     QVTKOpenGLNativeWidget* widget;
@@ -44,6 +41,12 @@ private:
     std::vector<vtkSmartPointer<vtkCylinderSource>> diskSources;
     std::vector<vtkSmartPointer<vtkPolyDataMapper>> diskMappers;
     std::vector<vtkSmartPointer<vtkActor>> diskActors;
+
+    vtkSmartPointer<vtkParametricSpline> backboneSpline;
+    vtkSmartPointer<vtkParametricFunctionSource> backboneFunctionSource;
+    vtkSmartPointer<vtkTubeFilter> backboneTubeFilter;
+    vtkSmartPointer<vtkPolyDataMapper> backboneMapper;
+    vtkSmartPointer<vtkActor> backboneActor;
 
     bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d pose);
 };

@@ -1,5 +1,12 @@
 #include "vtk_visualizer.h"
 
+#include <vtkNew.h>
+#include <vtkProperty.h>
+#include <vtkMatrix4x4.h>
+#include <vtkTransform.h>
+#include <vtkCamera.h>
+#include <vtkPoints.h>
+
 VtkVisualizer::VtkVisualizer(TendonRobot & robot)
 {
     // VTK OpenGL Visualizer
@@ -29,9 +36,22 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
         }
         diskSources.push_back(diskSource);
     }
-
     diskActors[0]->GetProperty()->SetColor(0.0, 0.8, 0.0);  // Test visualization purpose
 
+    backboneSpline = vtkSmartPointer<vtkParametricSpline>::New();
+    backboneFunctionSource = vtkSmartPointer<vtkParametricFunctionSource>::New();
+    backboneFunctionSource->SetParametricFunction(backboneSpline);
+    // Create a tube (cylinder) around the spline
+    backboneTubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
+    backboneTubeFilter->SetInputConnection(backboneFunctionSource->GetOutputPort());
+    backboneTubeFilter->SetRadius(2.5e-4);
+    backboneTubeFilter->SetNumberOfSides(50);
+
+    backboneMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    backboneMapper->SetInputConnection(backboneTubeFilter->GetOutputPort());
+    backboneActor = vtkSmartPointer<vtkActor>::New();
+    backboneActor->SetMapper(backboneMapper);
+    backboneActor->GetProperty()->SetColor(0.2, 0.2, 0.2);
 
     renderer = vtkSmartPointer<vtkRenderer>::New();
     // initial camera view
@@ -44,6 +64,7 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
     for (int i = 0; i < diskActors.size(); i++) {
         renderer->AddActor(diskActors[i]);
     }
+    renderer->AddActor(backboneActor);
     renderer->SetBackground(1.0, 1.0, 1.0);
     renderWindow->AddRenderer(renderer);
 }
@@ -63,11 +84,21 @@ bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPos
     if (allDisksPose.size() != diskMappers.size()) {
         return false;
     }
+    vtkNew<vtkPoints> points;
     for (int i = 0; i < allDisksPose.size(); i++) {
         if (!SetDiskPose(diskActors[i], allDisksPose[i])) {
-            return false;
+            return false;  // TODO: detailed error handling
         }
+
+        Eigen::Vector3d diskCenter = allDisksPose[i].block(0, 3, 3, 1);
+        double diskCenterRaw[3];
+        Eigen::Vector3d::Map(diskCenterRaw, diskCenter.rows()) = diskCenter;
+        points->InsertNextPoint(diskCenterRaw);
     }
+    backboneSpline->SetPoints(points);
+    backboneFunctionSource->Update();
+    backboneTubeFilter->Update();
+
     renderWindow->Render();
     return true;
 }
@@ -76,9 +107,9 @@ bool VtkVisualizer::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Ma
 {
     Eigen::Matrix4d vtkDisplayMat;
     vtkDisplayMat << 1.0, 0.0, 0.0, 0.0,
-                   0.0, 0.0, -1.0, 0.0,
-                   0.0, 1.0, 0.0, 0.0,
-                   0.0, 0.0, 0.0, 1.0;  // Rotate disk around its x-axis for pi/2
+                     0.0, 0.0, -1.0, 0.0,
+                     0.0, 1.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 1.0;  // Rotate disk around its x-axis for pi/2
     Eigen::Matrix4d displayPose = pose * vtkDisplayMat;
     vtkSmartPointer<vtkMatrix4x4> vtkPose = vtkSmartPointer<vtkMatrix4x4>::New();
     vtkPose->SetElement(0,0,displayPose(0,0));  // TODO

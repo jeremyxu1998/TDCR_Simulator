@@ -7,5 +7,6 @@ moc_*.h
 Makefile*
 /.qmake.stash
 *.o
+tendon_robot_simulator
 
 .vscode
