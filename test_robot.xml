@@ -1,0 +1,42 @@
+<TendonRobot NumberOfSegments="2" Name="TestTendonRobot">
+    <Segment Number="1" Type="ConstantCurvatureSegment">
+        <BackboneLength>70e-3</BackboneLength>
+        <Extensible>false</Extensible>
+        <NumTendon>3</NumTendon>
+        <NumDisk>8</NumDisk>
+        <DiskRadius>2.5e-3</DiskRadius>
+        <InitialCurvature>0.0</InitialCurvature>
+        <InitialRotAngle>0.0</InitialRotAngle>
+    </Segment>
+    <Segment Number="2" Type="ConstantCurvatureSegment">
+        <BackboneLength>50e-3</BackboneLength>
+        <Extensible>false</Extensible>
+        <NumTendon>3</NumTendon>
+        <NumDisk>6</NumDisk>
+        <DiskRadius>2.0e-3</DiskRadius>
+        <InitialCurvature>0.0</InitialCurvature>
+        <InitialRotAngle>0.0</InitialRotAngle>
+    </Segment>
+    <!-- <Tube Number="2" Type="StraightCurvedTube">
+        <TotalLength>311e-3</TotalLength>
+        <OuterDiameter>1.68e-3</OuterDiameter>
+        <InnerDiameter>1.35e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>241.1e-3</StraightLength>
+        <CurvatureX>5.0</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube>
+    <Tube Number="3" Type="StraightCurvedTube">
+        <TotalLength>151e-3</TotalLength>
+        <OuterDiameter>2.32e-3</OuterDiameter>
+        <InnerDiameter>1.87e-3</InnerDiameter>
+        <YoungsModulus>50e+9</YoungsModulus>
+        <PoissonsRatio>0.3</PoissonsRatio>
+        <StraightLength>82.4e-3</StraightLength>
+        <CurvatureX>1.5</CurvatureX>
+        <CurvatureY>0</CurvatureY>
+        <CurvatureZ>0</CurvatureZ>
+    </Tube> -->
+</TendonRobot>

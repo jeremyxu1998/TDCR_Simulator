@@ -1,0 +1,11 @@
+*.pro.user
+ui_*.h
+*.moc
+moc_*.cpp
+moc_*.h
+
+Makefile*
+/.qmake.stash
+*.o
+
+.vscode
