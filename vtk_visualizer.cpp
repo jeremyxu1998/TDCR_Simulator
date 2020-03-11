@@ -35,6 +35,8 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
             diskActors.push_back(diskActor);
         }
         diskSources.push_back(diskSource);
+        segDiskNum.push_back(robot.getSegments()[segCount].getDiskNum());
+        segPitchRad.push_back(robot.getSegments()[segCount].getPitchRadius());
     }
     diskActors[0]->GetProperty()->SetColor(0.0, 0.8, 0.0);  // Test visualization purpose
 
@@ -53,6 +55,86 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
     backboneActor->SetMapper(backboneMapper);
     backboneActor->GetProperty()->SetColor(0.2, 0.2, 0.2);
 
+    //tendonLines.resize(segmentNum);
+    //tendonCells.resize(segmentNum);
+    //tendonPolyDatas.resize(segmentNum);
+    //tendonTubeFilters.resize(segmentNum);
+    //tendonMappers.resize(segmentNum);
+    //tendonActors.resize(segmentNum);
+    //for (unsigned segCount = 0; segCount < segmentNum; segCount++) {
+    //    for (unsigned tendonCount = 0; tendonCount < robot.getSegments()[segCount].getTendonNum(); tendonCount++) {
+    //        vtkNew<vtkPolyLine> tendonLine;
+    //        tendonLine->GetPointIds()->SetNumberOfIds(segDiskNum[segCount]);
+    //        for(unsigned int i = 0; i < segDiskNum[segCount]; i++)
+    //        {
+    //            tendonLine->GetPointIds()->SetId(i,i);
+    //        }
+    //        tendonLines[segCount].push_back(tendonLine);
+    //        vtkNew<vtkCellArray> tendonCell;
+    //        tendonCell->InsertNextCell(tendonLine);
+    //        tendonCells[segCount].push_back(tendonCell);
+    //        vtkNew<vtkPolyData> tendonPoly;
+    //        tendonPoly->SetLines(tendonCell);
+    //        tendonPolyDatas[segCount].push_back(tendonPoly);
+    //        vtkNew<vtkTubeFilter> tendonTube;
+    //        tendonTube->SetInputData(tendonPoly);
+    //        tendonTubeFilters[segCount].push_back(tendonTube);
+    //        vtkNew<vtkPolyDataMapper> tendonMapper;
+    //        tendonMapper->SetInputConnection(tendonTube->GetOutputPort());
+    //        tendonMappers[segCount].push_back(tendonMapper);
+    //        vtkNew<vtkActor> tendonActor;
+    //        tendonActor->SetMapper(tendonMapper);
+    //        tendonActor->GetProperty()->SetColor(0.1, 0.1, 0.1);
+    //        tendonActors[segCount].push_back(tendonActor);
+    //    }
+    //}
+
+    /* test *//*
+    vtkNew<vtkPoints> tendonPoints;
+    for (int i = 0; i < segDiskNum[0]; i++) {
+        double point[3] = {0.0025, 0.0, i*0.01};
+        tendonPoints->InsertNextPoint(point);
+    }
+    //tendonPolyDatas[0][0]->SetPoints(tendonPoints);
+
+    vtkSmartPointer<vtkPolyLine> polyLine =
+        vtkSmartPointer<vtkPolyLine>::New();
+      polyLine->GetPointIds()->SetNumberOfIds(segDiskNum[0]);
+      for(unsigned int i = 0; i < segDiskNum[0]; i++)
+      {
+        polyLine->GetPointIds()->SetId(i,i);
+      }
+
+      // Create a cell array to store the lines in and add the lines to it
+      vtkSmartPointer<vtkCellArray> cells =
+        vtkSmartPointer<vtkCellArray>::New();
+      cells->InsertNextCell(polyLine);
+
+      // Create a polydata to store everything in
+      vtkSmartPointer<vtkPolyData> polyData =
+        vtkSmartPointer<vtkPolyData>::New();
+
+      // Add the points to the dataset
+      polyData->SetPoints(tendonPoints);
+
+      // Add the lines to the dataset
+      polyData->SetLines(cells);
+
+      vtkNew<vtkTubeFilter> tube;
+      tube->SetInputData(polyData);
+
+      // Setup actor and mapper
+      vtkSmartPointer<vtkPolyDataMapper> mapper =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+      mapper->SetInputConnection(tube->GetOutputPort());
+      //mapper->SetInputData(polyData);
+
+      vtkSmartPointer<vtkActor> actor =
+        vtkSmartPointer<vtkActor>::New();
+      actor->SetMapper(mapper);
+      actor->GetProperty()->SetColor(0.1, 0.1, 0.1);
+    *//* test */
+
     renderer = vtkSmartPointer<vtkRenderer>::New();
     // initial camera view
     vtkNew<vtkCamera> camera;
@@ -65,6 +147,12 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
         renderer->AddActor(diskActors[i]);
     }
     renderer->AddActor(backboneActor);
+    // renderer->AddActor(actor);
+    //for (unsigned segCount = 0; segCount < segmentNum; segCount++) {
+    //    for (unsigned tendonCount = 0; tendonCount < robot.getSegments()[segCount].getTendonNum(); tendonCount++) {
+    //        renderer->AddActor(tendonActors[segCount][tendonCount]);
+    //    }
+    //}
     renderer->SetBackground(1.0, 1.0, 1.0);
     renderWindow->AddRenderer(renderer);
 }
@@ -98,6 +186,17 @@ bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPos
     backboneSpline->SetPoints(points);
     backboneFunctionSource->Update();
     backboneTubeFilter->Update();
+
+    //vtkNew<vtkPoints> tendonPoints;
+    //for (int i = 0; i < segDiskNum[0]; i++) {
+    //    Eigen::Vector4d tendonOnePosRel;
+    //    tendonOnePosRel << segPitchRad[0], 0.0, 0.0, 1.0;
+    //    Eigen::Vector4d tendonOnePosWor = allDisksPose[i] * tendonOnePosRel;
+    //    double point[3] = {tendonOnePosWor(0), tendonOnePosWor(1), tendonOnePosWor(2)};
+    //    tendonPoints->InsertNextPoint(point);
+    //}
+    //tendonPolyDatas[0][0]->SetPoints(tendonPoints);
+    //tendonTubeFilters[0][0]->Update();
 
     renderWindow->Render();
     return true;

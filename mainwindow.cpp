@@ -1,6 +1,9 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <chrono>
+#include <thread>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -12,6 +15,10 @@ MainWindow::MainWindow(QWidget *parent)
     // Robot initialization
     tendonLengthUI = robot.ReadFromXMLFile("test_robot.xml");
     robot.setTendonLength(tendonLengthUI);  // TODO: is it legit to put here?
+    for (int i = 0; i < tendonLengthUI.size(); i++) {
+        Eigen::VectorXd segTenLength(tendonLengthUI[i]);
+        tendonLengthOld.push_back(segTenLength);
+    }
     controller.AddRobot(robot);
 
     // TODO: cleaner way to initialize
@@ -93,7 +100,31 @@ void MainWindow::on_tendon_2_4_valueChanged(double val)
 
 void MainWindow::on_calculateButton_clicked()
 {
-    robot.setTendonLength(tendonLengthUI);
-    visualizer->UpdateVisualization(robot.getAllDisksPose());
+    // TODO: animation speed based on tendon contraction speed?
+    // TODO: change tendonLengthUI to Eigen::Matrix
+    int frame_num = 10;
+    std::vector<Eigen::VectorXd> tendonLengthDelta;
+    for (int i = 0; i < tendonLengthUI.size(); i++) {
+        Eigen::VectorXd delta = tendonLengthUI[i] - tendonLengthOld[i];
+        delta /= static_cast<double>(frame_num);
+        tendonLengthDelta.push_back(delta);
+    }
+    std::vector<Eigen::VectorXd> tendonLengthFrame;
+    for (int i = 0; i < tendonLengthUI.size(); i++) {
+        Eigen::VectorXd init(tendonLengthOld[i]);
+        tendonLengthFrame.push_back(init);
+    }
+    for (int frame_count = 0; frame_count < frame_num; frame_count++) {
+        for (int i = 0; i < tendonLengthUI.size(); i++) {
+            tendonLengthFrame[i] += tendonLengthDelta[i];
+        }
+        robot.setTendonLength(tendonLengthFrame);
+        visualizer->UpdateVisualization(robot.getAllDisksPose());
+        QCoreApplication::processEvents();  // Notify Qt to update the widget
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    for (int i = 0; i < tendonLengthUI.size(); i++) {
+        tendonLengthOld[i] = tendonLengthUI[i];
+    }
     return;
 }

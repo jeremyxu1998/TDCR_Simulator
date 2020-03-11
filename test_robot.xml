@@ -4,7 +4,8 @@
         <Extensible>false</Extensible>
         <NumTendon>3</NumTendon>
         <NumDisk>8</NumDisk>
-        <DiskRadius>2.5e-3</DiskRadius>
+        <PitchRadius>2.5e-3</PitchRadius>
+        <DiskRadius>2.7e-3</DiskRadius>
         <InitialCurvature>0.0</InitialCurvature>
         <InitialRotAngle>0.0</InitialRotAngle>
     </Segment>
@@ -13,7 +14,8 @@
         <Extensible>false</Extensible>
         <NumTendon>3</NumTendon>
         <NumDisk>6</NumDisk>
-        <DiskRadius>2.0e-3</DiskRadius>
+        <PitchRadius>2.0e-3</PitchRadius>
+        <DiskRadius>2.7e-3</DiskRadius>
         <InitialCurvature>0.0</InitialCurvature>
         <InitialRotAngle>0.0</InitialRotAngle>
     </Segment>

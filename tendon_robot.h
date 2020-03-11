@@ -22,9 +22,11 @@ private:
     class ConstCurvSegment
     {
     public:
-        ConstCurvSegment(double segLength, bool extensible, int segNumTendon, int numDisk, double diskRadius);
+        ConstCurvSegment(double segLength, bool extensible, int numTendon, int numDisk, double pitchRadius, double diskRadius);
 
         int getDiskNum();
+        int getTendonNum();
+        double getPitchRadius();
         double getDiskRadius();
         double getPhi();
 
@@ -36,8 +38,9 @@ private:
         // Property
         double m_segLength;  // l_j
         bool m_extensible;
-        int m_segNumTendon;  // i_j
+        int m_numTendon;  // i_j
         int m_numDisk;
+        double m_pitchRadius;
         double m_diskRadius;
         // double m_baseRadialAngle;  // support for: different tendon position from the last segment
 

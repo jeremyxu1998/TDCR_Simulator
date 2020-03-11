@@ -105,6 +105,7 @@ std::vector<Eigen::VectorXd> TendonRobot::SetFromDomElement(QDomElement const& e
                                  curNode.firstChildElement("Extensible").text() == QString("true") ? true : false,
                                  curNode.firstChildElement("NumTendon").text().toInt(),
                                  curNode.firstChildElement("NumDisk").text().toInt(),
+                                 curNode.firstChildElement("PitchRadius").text().toDouble(),
                                  curNode.firstChildElement("DiskRadius").text().toDouble()
                                 );
         m_segments.emplace_back(segment);
@@ -171,14 +172,24 @@ std::vector<TendonRobot::ConstCurvSegment> & TendonRobot::getSegments()
     return m_segments;
 }
 
-TendonRobot::ConstCurvSegment::ConstCurvSegment(double segLength, bool extensible, int segNumTendon, int numDisk, double diskRadius)
-                : m_segLength(segLength), m_extensible(extensible), m_segNumTendon(segNumTendon), m_numDisk(numDisk), m_diskRadius(diskRadius)
+TendonRobot::ConstCurvSegment::ConstCurvSegment(double segLength, bool extensible, int numTendon, int numDisk, double pitchRadius, double diskRadius)
+                : m_segLength(segLength), m_extensible(extensible), m_numTendon(numTendon), m_numDisk(numDisk), m_pitchRadius(pitchRadius), m_diskRadius(diskRadius)
 {
 }
 
 int TendonRobot::ConstCurvSegment::getDiskNum()
 {
     return m_numDisk;
+}
+
+int TendonRobot::ConstCurvSegment::getTendonNum()
+{
+    return m_numTendon;
+}
+
+double TendonRobot::ConstCurvSegment::getPitchRadius()
+{
+    return m_pitchRadius;
 }
 
 double TendonRobot::ConstCurvSegment::getDiskRadius()
@@ -205,9 +216,9 @@ std::vector<Eigen::Matrix4d> TendonRobot::ConstCurvSegment::getSegDisksPose()
 
 bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tendonLength)
 {
-    Eigen::VectorXd q(m_segNumTendon);
-    if (tendonLength.rows() == m_segNumTendon) {
-        q = tendonLength - Eigen::VectorXd::Constant(m_segNumTendon, m_segLength);
+    Eigen::VectorXd q(m_numTendon);
+    if (tendonLength.rows() == m_numTendon) {
+        q = tendonLength - Eigen::VectorXd::Constant(m_numTendon, m_segLength);
         // check sum of delta = 0
         if (fabs(q.sum()) > EPSILON) {
             return false;
@@ -233,9 +244,9 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
     }
     else {
         // Robot dependent mapping: tendonLength --> k,phi,l
-        double beta = 2 * M_PI / m_segNumTendon;
+        double beta = 2 * M_PI / m_numTendon;
         m_twistAngle = atan2(-q(0)*cos(beta)+q(1), -q(0)*sin(beta));
-        double orthoDistance_t1 = m_diskRadius * cos(m_twistAngle);  // delta_j_1
+        double orthoDistance_t1 = m_pitchRadius * cos(m_twistAngle);  // delta_j_1
         m_curvature = -(q(0)) / (m_segLength * orthoDistance_t1);
 
         // Robot independent mapping: k,phi,l --> T

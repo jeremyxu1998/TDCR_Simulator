@@ -40,6 +40,7 @@ private:
 
     TendonRobot robot;
     std::vector<Eigen::VectorXd> tendonLengthUI;
+    std::vector<Eigen::VectorXd> tendonLengthOld;  // Record previous tendon length for animation
     RobotController controller;
     VtkVisualizer* visualizer;
 
