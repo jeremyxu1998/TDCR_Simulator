@@ -4,7 +4,6 @@
 #include "tendon_robot.h"
 
 #include <vector>
-
 #include <Eigen/Dense>
 
 // VTK Factory initialisation (for VTK version above 6)
@@ -19,9 +18,9 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtkCylinderSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkParametricSpline.h>
-#include <vtkPolyLine.h>
-#include <vtkTubeFilter.h>
 #include <vtkParametricFunctionSource.h>
+#include <vtkLineSource.h>
+#include <vtkTubeFilter.h>
 #include <vtkActor.h>
 #include <vtkRenderer.h>
 
@@ -49,16 +48,15 @@ private:
     vtkSmartPointer<vtkPolyDataMapper> backboneMapper;
     vtkSmartPointer<vtkActor> backboneActor;
 
-    std::vector<std::vector< vtkSmartPointer<vtkPolyLine> >> tendonLines;  // size: seg_num * tendon_num
-    std::vector<std::vector< vtkSmartPointer<vtkCellArray> >> tendonCells;
-    std::vector<std::vector< vtkSmartPointer<vtkPolyData> >> tendonPolyDatas;
+    std::vector<std::vector< vtkSmartPointer<vtkLineSource> >> tendonLines;  // size: seg_num * tendon_num
     std::vector<std::vector< vtkSmartPointer<vtkTubeFilter> >> tendonTubeFilters;
     std::vector<std::vector< vtkSmartPointer<vtkPolyDataMapper> >> tendonMappers;
     std::vector<std::vector< vtkSmartPointer<vtkActor> >> tendonActors;
 
     // Helper data stuctures to store robot property details
     std::vector<unsigned> segDiskNum;  // size: seg_num
-    std::vector<double> segPitchRad;  // size: seg_num
+    std::vector<unsigned> segTendonNum;
+    std::vector<double> segPitchRad;
 
     bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d pose);
 };

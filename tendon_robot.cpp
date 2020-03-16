@@ -138,14 +138,15 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
         }
         allDisksPose.reserve(allDisksPose.size() + std::distance(curSegPoses.begin(), curSegPoses.end()));
         allDisksPose.insert(allDisksPose.end(), curSegPoses.begin(), curSegPoses.end());
-        // Compensate for the Phi angle between every two segments
-        double compPhiAng = -m_segments[j].getPhi();
-        Eigen::Matrix4d compPhiMat;
-        compPhiMat << cos(compPhiAng), -sin(compPhiAng), 0.0, 0.0,
-                      sin(compPhiAng), cos(compPhiAng), 0.0, 0.0,
-                      0.0, 0.0, 1.0, 0.0,
-                      0.0, 0.0, 0.0, 1.0;
-        curBasePose = curBasePose * m_segments[j].getSegTipPose() * compPhiMat;
+        // // Compensate for the Phi angle between every two segments
+        // double compPhiAng = -m_segments[j].getPhi();
+        // Eigen::Matrix4d compPhiMat;
+        // compPhiMat << cos(compPhiAng), -sin(compPhiAng), 0.0, 0.0,
+        //               sin(compPhiAng), cos(compPhiAng), 0.0, 0.0,
+        //               0.0, 0.0, 1.0, 0.0,
+        //               0.0, 0.0, 0.0, 1.0;
+        // curBasePose = curBasePose * m_segments[j].getSegTipPose() * compPhiMat;
+        curBasePose = curBasePose * m_segments[j].getSegTipPose();
     }
     return allDisksPose;
 }
@@ -276,7 +277,14 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
             inPlaneTrans.topLeftCorner(3,3) = inPlaneRot;
             inPlaneTrans.block(0, 3, 3, 1) = inPlanePos;
 
-            Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans;
+            Eigen::Matrix4d compPhiMat;
+            compPhiMat << cos(-m_twistAngle), -sin(-m_twistAngle), 0, 0,
+                          sin(-m_twistAngle), cos(-m_twistAngle), 0, 0,
+                          0, 0, 1, 0,
+                          0, 0, 0, 1;
+
+            Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans * compPhiMat;
+            // Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans;
             m_diskPose.push_back(curDiskPose);
         }
     }
