@@ -22,12 +22,19 @@ private:
     class ConstCurvSegment
     {
     public:
-        ConstCurvSegment(double segLength, bool extensible, int numTendon, int numDisk, double pitchRadius, double diskRadius);
+        ConstCurvSegment(double segLength,
+                         bool extensible,
+                         int numTendon,
+                         int numDisk,
+                         double pitchRadius,
+                         double diskRadius,
+                         double diskThickness);
 
         int getDiskNum();
         int getTendonNum();
         double getPitchRadius();
         double getDiskRadius();
+        double getDiskThickness();
         double getPhi();
 
         Eigen::Matrix4d & getSegTipPose();
@@ -42,6 +49,7 @@ private:
         int m_numDisk;
         double m_pitchRadius;
         double m_diskRadius;
+        double m_diskThickness;
         // double m_baseRadialAngle;  // support for: different tendon position from the last segment
 
         // Geometry

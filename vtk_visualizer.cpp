@@ -21,7 +21,7 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
     for (unsigned segCount = 0; segCount < segmentNum; segCount++) {
         vtkNew<vtkCylinderSource> diskSource;
         diskSource->SetRadius(robot.getSegments()[segCount].getDiskRadius());
-        diskSource->SetHeight(5e-4);
+        diskSource->SetHeight(robot.getSegments()[segCount].getDiskThickness());
         diskSource->SetResolution(100);
 
         for (unsigned diskCount = 0; diskCount < robot.getSegments()[segCount].getDiskNum(); diskCount++) {

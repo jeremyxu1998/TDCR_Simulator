@@ -106,7 +106,8 @@ std::vector<Eigen::VectorXd> TendonRobot::SetFromDomElement(QDomElement const& e
                                  curNode.firstChildElement("NumTendon").text().toInt(),
                                  curNode.firstChildElement("NumDisk").text().toInt(),
                                  curNode.firstChildElement("PitchRadius").text().toDouble(),
-                                 curNode.firstChildElement("DiskRadius").text().toDouble()
+                                 curNode.firstChildElement("DiskRadius").text().toDouble(),
+                                 curNode.firstChildElement("DiskThickness").text().toDouble()
                                 );
         m_segments.emplace_back(segment);
 
@@ -138,15 +139,15 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
         }
         allDisksPose.reserve(allDisksPose.size() + std::distance(curSegPoses.begin(), curSegPoses.end()));
         allDisksPose.insert(allDisksPose.end(), curSegPoses.begin(), curSegPoses.end());
-        // // Compensate for the Phi angle between every two segments
-        // double compPhiAng = -m_segments[j].getPhi();
-        // Eigen::Matrix4d compPhiMat;
-        // compPhiMat << cos(compPhiAng), -sin(compPhiAng), 0.0, 0.0,
-        //               sin(compPhiAng), cos(compPhiAng), 0.0, 0.0,
-        //               0.0, 0.0, 1.0, 0.0,
-        //               0.0, 0.0, 0.0, 1.0;
-        // curBasePose = curBasePose * m_segments[j].getSegTipPose() * compPhiMat;
         curBasePose = curBasePose * m_segments[j].getSegTipPose();
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = curBasePose.topLeftCorner(3,3) * offsetRel;
+            curBasePose.block(0, 3, 3, 1) += offsetWorld;
+        }
     }
     return allDisksPose;
 }
@@ -173,8 +174,21 @@ std::vector<TendonRobot::ConstCurvSegment> & TendonRobot::getSegments()
     return m_segments;
 }
 
-TendonRobot::ConstCurvSegment::ConstCurvSegment(double segLength, bool extensible, int numTendon, int numDisk, double pitchRadius, double diskRadius)
-                : m_segLength(segLength), m_extensible(extensible), m_numTendon(numTendon), m_numDisk(numDisk), m_pitchRadius(pitchRadius), m_diskRadius(diskRadius)
+TendonRobot::ConstCurvSegment::ConstCurvSegment(
+                                double segLength,
+                                bool extensible,
+                                int numTendon,
+                                int numDisk,
+                                double pitchRadius,
+                                double diskRadius,
+                                double diskThickness)
+                            : m_segLength(segLength),
+                              m_extensible(extensible),
+                              m_numTendon(numTendon),
+                              m_numDisk(numDisk),
+                              m_pitchRadius(pitchRadius),
+                              m_diskRadius(diskRadius),
+                              m_diskThickness(diskThickness)
 {
 }
 
@@ -196,6 +210,11 @@ double TendonRobot::ConstCurvSegment::getPitchRadius()
 double TendonRobot::ConstCurvSegment::getDiskRadius()
 {
     return m_diskRadius;
+}
+
+double TendonRobot::ConstCurvSegment::getDiskThickness()
+{
+    return m_diskThickness;
 }
 
 double TendonRobot::ConstCurvSegment::getPhi()
@@ -284,7 +303,6 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
                           0, 0, 0, 1;
 
             Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans * compPhiMat;
-            // Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans;
             m_diskPose.push_back(curDiskPose);
         }
     }
