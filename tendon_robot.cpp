@@ -6,7 +6,7 @@
 #include <QDebug>
 #include <QFile>
 
-#define EPSILON 1e-5 /*std::numeric_limits<double>::epsilon()*/
+#define EPSILON 1e-7
 
 TendonRobot::TendonRobot()
 {
@@ -249,8 +249,18 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
         return false;
     }
 
-    
-    if (fabs(q(0)) < EPSILON && fabs(q(1)) < EPSILON) { // TODO: Fix multiple tendon; think about if this is best way to code zero case
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    if (zeroInputCase) {
         m_twistAngle = 0.0;
         m_curvature = 0.0;
         m_diskPose.clear();
@@ -263,14 +273,17 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
         }
     }
     else {
-        // Robot dependent mapping: tendonLength --> k,phi,l
+        /* Robot dependent mapping: tendonLength --> k,phi,l */
         double beta = 2 * M_PI / m_numTendon;
-        m_twistAngle = atan2(-q(0)*cos(beta)+q(1), -q(0)*sin(beta));
-        double orthoDistance_t1 = m_pitchRadius * cos(m_twistAngle);  // delta_j_1
-        m_curvature = -(q(0)) / (m_segLength * orthoDistance_t1);
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        m_twistAngle = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;
+        double orthoDistance = m_pitchRadius * cos(m_twistAngle + nonZeroId * beta);  // delta_j_1
+        // Use any non-zero q(i) could give the same curvature
+        m_curvature = -(q(nonZeroId)) / (m_segLength * orthoDistance);
 
-        // Robot independent mapping: k,phi,l --> T
+        /* Robot independent mapping: k,phi,l --> T */
         m_diskPose.clear();
+        double twistAngleCcw = -m_twistAngle;  // Twist angle is defined CW, however tendon sequence (and coordinate) is CCW
         double disk_arc = m_segLength / static_cast<double>(m_numDisk-1);
         for (int disk_count = 0; disk_count < m_numDisk; disk_count++) {
             if (disk_count == 0) {
@@ -278,31 +291,35 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
                 continue;
             }
             double s = disk_count * disk_arc;
-            Eigen::Matrix4d outOfPlaneTrans;
-            outOfPlaneTrans << cos(m_twistAngle), -sin(m_twistAngle), 0, 0,
-                            sin(m_twistAngle), cos(m_twistAngle), 0, 0,
+            Eigen::Matrix4d rotPhiTrans;
+            rotPhiTrans << cos(twistAngleCcw), -sin(twistAngleCcw), 0, 0,
+                           sin(twistAngleCcw), cos(twistAngleCcw), 0, 0,
+                           0, 0, 1, 0,
+                           0, 0, 0, 1;
+            Eigen::Matrix3d bendRot;
+            double theta = m_curvature * s;
+            bendRot << cos(theta), 0, sin(theta),
+                       0, 1, 0,
+                       -sin(theta), 0, cos(theta);
+            Eigen::Vector3d bendPos;
+            bendPos << (1/m_curvature) * (1 - cos(theta)),
+                       0,
+                       (1/m_curvature) * sin(theta);
+            Eigen::Matrix4d bendTrans = Eigen::Matrix4d::Identity();
+            bendTrans.topLeftCorner(3,3) = bendRot;
+            bendTrans.block(0, 3, 3, 1) = bendPos;
+
+            Eigen::Matrix4d compPhiTrans;
+            compPhiTrans << cos(-twistAngleCcw), -sin(-twistAngleCcw), 0, 0,
+                            sin(-twistAngleCcw), cos(-twistAngleCcw), 0, 0,
                             0, 0, 1, 0,
                             0, 0, 0, 1;
-            Eigen::Matrix3d inPlaneRot;
-            double theta = m_curvature * s;
-            inPlaneRot << cos(theta), 0, sin(theta),
-                        0, 1, 0,
-                        -sin(theta), 0, cos(theta);
-            Eigen::Vector3d inPlanePos;
-            inPlanePos << (1/m_curvature) * (1 - cos(theta)),
-                        0,
-                        (1/m_curvature) * sin(theta);
-            Eigen::Matrix4d inPlaneTrans = Eigen::Matrix4d::Identity();
-            inPlaneTrans.topLeftCorner(3,3) = inPlaneRot;
-            inPlaneTrans.block(0, 3, 3, 1) = inPlanePos;
 
-            Eigen::Matrix4d compPhiMat;
-            compPhiMat << cos(-m_twistAngle), -sin(-m_twistAngle), 0, 0,
-                          sin(-m_twistAngle), cos(-m_twistAngle), 0, 0,
-                          0, 0, 1, 0,
-                          0, 0, 0, 1;
-
-            Eigen::Matrix4d curDiskPose = outOfPlaneTrans * inPlaneTrans * compPhiMat;
+            /* The bending process for disks is decoupled into three steps, each WRT current coordinate:
+             * Rotate around z-axis for twist angle (phi)
+             * Bend in xz-plane for bending angle (theta), i.e. rotate around y-axis
+             * Rotate around z-axis for negative twist angle (-phi) */
+            Eigen::Matrix4d curDiskPose = rotPhiTrans * bendTrans * compPhiTrans;
             m_diskPose.push_back(curDiskPose);
         }
     }
