@@ -50,8 +50,7 @@ MainWindow::~MainWindow()
 void MainWindow::ChangeSpinboxVal(QDoubleSpinBox* box, double value)
 {
     if (value >= 0.0) {
-        box->setDecimals(4);
-        box->setValue(value);
+        box->setValue(value * 1000.0);
     }
     else {
         box->setEnabled(false);
@@ -60,42 +59,42 @@ void MainWindow::ChangeSpinboxVal(QDoubleSpinBox* box, double value)
 
 void MainWindow::on_tendon_1_1_valueChanged(double val)
 {
-    tendonLengthUI[0][0] = val;
+    tendonLengthUI[0][0] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_2_valueChanged(double val)
 {
-    tendonLengthUI[0][1] = val;
+    tendonLengthUI[0][1] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_3_valueChanged(double val)
 {
-    tendonLengthUI[0][2] = val;
+    tendonLengthUI[0][2] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_4_valueChanged(double val)
 {
-    tendonLengthUI[0][3] = val;
+    tendonLengthUI[0][3] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_1_valueChanged(double val)
 {
-    tendonLengthUI[1][0] = val;
+    tendonLengthUI[1][0] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_2_valueChanged(double val)
 {
-    tendonLengthUI[1][1] = val;
+    tendonLengthUI[1][1] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_3_valueChanged(double val)
 {
-    tendonLengthUI[1][2] = val;
+    tendonLengthUI[1][2] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_4_valueChanged(double val)
 {
-    tendonLengthUI[1][3] = val;
+    tendonLengthUI[1][3] = val / 1000.0;
 }
 
 void MainWindow::on_calculateButton_clicked()
@@ -127,4 +126,18 @@ void MainWindow::on_calculateButton_clicked()
         tendonLengthOld[i] = tendonLengthUI[i];
     }
     return;
+}
+
+void MainWindow::on_segLenSlider_1_valueChanged(int value)
+{
+    double length = 70e-3 + 20e-3 * static_cast<double>(value / 1000.0) / static_cast<double>((ui->segLenSlider_1)->maximum());
+    //ui->segLenBox_1->setValue(length);
+}
+
+void MainWindow::on_segLenBox_1_valueChanged(double val)
+{
+    int sliderVal = static_cast<int>((val / 1000.0 - 0.07) / 0.0002);
+    // TODO: bound check
+    //printf("%d\n",sliderVal);
+    ui->segLenSlider_1->setValue(sliderVal);
 }

@@ -1,23 +1,23 @@
 <TendonRobot NumberOfSegments="2" Name="TestTendonRobot">
     <Segment Number="1" Type="ConstantCurvatureSegment">
-        <BackboneLength>70e-3</BackboneLength>
+        <BackboneLength>70</BackboneLength>
         <Extensible>false</Extensible>
         <NumTendon>3</NumTendon>
         <NumDisk>8</NumDisk>
-        <PitchRadius>2.5e-3</PitchRadius>
-        <DiskRadius>2.7e-3</DiskRadius>
-        <DiskThickness>5e-4</DiskThickness>
+        <PitchRadius>2.5</PitchRadius>
+        <DiskRadius>2.7</DiskRadius>
+        <DiskThickness>0.5</DiskThickness>
         <InitialCurvature>0.0</InitialCurvature>
         <InitialRotAngle>0.0</InitialRotAngle>
     </Segment>
     <Segment Number="2" Type="ConstantCurvatureSegment">
-        <BackboneLength>50e-3</BackboneLength>
+        <BackboneLength>50</BackboneLength>
         <Extensible>false</Extensible>
         <NumTendon>3</NumTendon>
         <NumDisk>6</NumDisk>
-        <PitchRadius>2.0e-3</PitchRadius>
-        <DiskRadius>2.7e-3</DiskRadius>
-        <DiskThickness>5e-4</DiskThickness>
+        <PitchRadius>2.0</PitchRadius>
+        <DiskRadius>2.7</DiskRadius>
+        <DiskThickness>0.5</DiskThickness>
         <InitialCurvature>0.0</InitialCurvature>
         <InitialRotAngle>0.0</InitialRotAngle>
     </Segment>

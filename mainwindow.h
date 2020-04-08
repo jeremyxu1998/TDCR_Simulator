@@ -35,6 +35,10 @@ private slots:
 
     void on_calculateButton_clicked();
 
+    void on_segLenSlider_1_valueChanged(int value);
+
+    void on_segLenBox_1_valueChanged(double arg1);
+
 private:
     Ui::MainWindow *ui;
 

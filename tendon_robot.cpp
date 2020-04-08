@@ -113,7 +113,7 @@ std::vector<Eigen::VectorXd> TendonRobot::SetFromDomElement(QDomElement const& e
 
         Eigen::VectorXd initSegTendonLength = Eigen::VectorXd::Constant(
                                                 curNode.firstChildElement("NumTendon").text().toInt(),
-                                                curNode.firstChildElement("BackboneLength").text().toDouble());
+                                                curNode.firstChildElement("BackboneLength").text().toDouble() / 1000.0);
         initTendonLength.emplace_back(initSegTendonLength);
     }
     return initTendonLength;
@@ -182,13 +182,13 @@ TendonRobot::ConstCurvSegment::ConstCurvSegment(
                                 double pitchRadius,
                                 double diskRadius,
                                 double diskThickness)
-                            : m_segLength(segLength),
+                            : m_segLength(segLength / 1000.0),
                               m_extensible(extensible),
                               m_numTendon(numTendon),
                               m_numDisk(numDisk),
-                              m_pitchRadius(pitchRadius),
-                              m_diskRadius(diskRadius),
-                              m_diskThickness(diskThickness)
+                              m_pitchRadius(pitchRadius / 1000.0),
+                              m_diskRadius(diskRadius / 1000.0),
+                              m_diskThickness(diskThickness / 1000.0)
 {
 }
 
