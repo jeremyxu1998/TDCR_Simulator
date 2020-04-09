@@ -43,8 +43,8 @@ private:
     Ui::MainWindow *ui;
 
     TendonRobot robot;
-    std::vector<Eigen::VectorXd> tendonLengthUI;
-    std::vector<Eigen::VectorXd> tendonLengthOld;  // Record previous tendon length for animation
+    std::vector<Eigen::VectorXd> tendonLengthChangeUI;
+    std::vector<Eigen::VectorXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     RobotController controller;
     VtkVisualizer* visualizer;
 

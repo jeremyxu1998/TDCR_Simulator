@@ -13,27 +13,28 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(QCoreApplication::applicationName());
 
     // Robot initialization
-    tendonLengthUI = robot.ReadFromXMLFile("test_robot.xml");
-    robot.setTendonLength(tendonLengthUI);  // TODO: is it legit to put here?
-    for (int i = 0; i < tendonLengthUI.size(); i++) {
-        Eigen::VectorXd segTenLength(tendonLengthUI[i]);
-        tendonLengthOld.push_back(segTenLength);
+    robot.ReadFromXMLFile("test_robot.xml");
+    for (int i = 0; i < robot.getNumSegment(); i++) {
+        Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero((robot.getSegments()[i]).getTendonNum());
+        tendonLengthChangeOld.push_back(segTenLenChg);
+        tendonLengthChangeUI.push_back(segTenLenChg);
     }
+    robot.setTendonLength(tendonLengthChangeUI);
     controller.AddRobot(robot);
 
     // TODO: cleaner way to initialize
-    ChangeSpinboxVal(ui->tendon_3_1, (tendonLengthUI.size() > 2 && tendonLengthUI[2].size()>=1 ? tendonLengthUI[2][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_2, (tendonLengthUI.size() > 2 && tendonLengthUI[2].size()>=2 ? tendonLengthUI[2][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_3, (tendonLengthUI.size() > 2 && tendonLengthUI[2].size()>=3 ? tendonLengthUI[2][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_4, (tendonLengthUI.size() > 2 && tendonLengthUI[2].size()>=4 ? tendonLengthUI[2][3] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_1, (tendonLengthUI.size() > 1 && tendonLengthUI[1].size()>=1 ? tendonLengthUI[1][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_2, (tendonLengthUI.size() > 1 && tendonLengthUI[1].size()>=2 ? tendonLengthUI[1][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_3, (tendonLengthUI.size() > 1 && tendonLengthUI[1].size()>=3 ? tendonLengthUI[1][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_4, (tendonLengthUI.size() > 1 && tendonLengthUI[1].size()>=4 ? tendonLengthUI[1][3] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_1, (tendonLengthUI[0].size()>=1 ? tendonLengthUI[0][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_2, (tendonLengthUI[0].size()>=2 ? tendonLengthUI[0][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_3, (tendonLengthUI[0].size()>=3 ? tendonLengthUI[0][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_4, (tendonLengthUI[0].size()>=4 ? tendonLengthUI[0][3] : -1.0));
+    ChangeSpinboxVal(ui->tendon_3_1, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=1 ? tendonLengthChangeUI[2][0] : -1.0));
+    ChangeSpinboxVal(ui->tendon_3_2, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=2 ? tendonLengthChangeUI[2][1] : -1.0));
+    ChangeSpinboxVal(ui->tendon_3_3, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=3 ? tendonLengthChangeUI[2][2] : -1.0));
+    ChangeSpinboxVal(ui->tendon_3_4, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=4 ? tendonLengthChangeUI[2][3] : -1.0));
+    ChangeSpinboxVal(ui->tendon_2_1, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=1 ? tendonLengthChangeUI[1][0] : -1.0));
+    ChangeSpinboxVal(ui->tendon_2_2, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=2 ? tendonLengthChangeUI[1][1] : -1.0));
+    ChangeSpinboxVal(ui->tendon_2_3, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=3 ? tendonLengthChangeUI[1][2] : -1.0));
+    ChangeSpinboxVal(ui->tendon_2_4, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=4 ? tendonLengthChangeUI[1][3] : -1.0));
+    ChangeSpinboxVal(ui->tendon_1_1, (tendonLengthChangeUI[0].size()>=1 ? tendonLengthChangeUI[0][0] : -1.0));
+    ChangeSpinboxVal(ui->tendon_1_2, (tendonLengthChangeUI[0].size()>=2 ? tendonLengthChangeUI[0][1] : -1.0));
+    ChangeSpinboxVal(ui->tendon_1_3, (tendonLengthChangeUI[0].size()>=3 ? tendonLengthChangeUI[0][2] : -1.0));
+    ChangeSpinboxVal(ui->tendon_1_4, (tendonLengthChangeUI[0].size()>=4 ? tendonLengthChangeUI[0][3] : -1.0));
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robot);
@@ -59,62 +60,62 @@ void MainWindow::ChangeSpinboxVal(QDoubleSpinBox* box, double value)
 
 void MainWindow::on_tendon_1_1_valueChanged(double val)
 {
-    tendonLengthUI[0][0] = val / 1000.0;
+    tendonLengthChangeUI[0][0] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_2_valueChanged(double val)
 {
-    tendonLengthUI[0][1] = val / 1000.0;
+    tendonLengthChangeUI[0][1] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_3_valueChanged(double val)
 {
-    tendonLengthUI[0][2] = val / 1000.0;
+    tendonLengthChangeUI[0][2] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_1_4_valueChanged(double val)
 {
-    tendonLengthUI[0][3] = val / 1000.0;
+    tendonLengthChangeUI[0][3] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_1_valueChanged(double val)
 {
-    tendonLengthUI[1][0] = val / 1000.0;
+    tendonLengthChangeUI[1][0] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_2_valueChanged(double val)
 {
-    tendonLengthUI[1][1] = val / 1000.0;
+    tendonLengthChangeUI[1][1] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_3_valueChanged(double val)
 {
-    tendonLengthUI[1][2] = val / 1000.0;
+    tendonLengthChangeUI[1][2] = val / 1000.0;
 }
 
 void MainWindow::on_tendon_2_4_valueChanged(double val)
 {
-    tendonLengthUI[1][3] = val / 1000.0;
+    tendonLengthChangeUI[1][3] = val / 1000.0;
 }
 
 void MainWindow::on_calculateButton_clicked()
 {
     // TODO: animation speed based on tendon contraction speed?
-    // TODO: change tendonLengthUI to Eigen::Matrix
+    // TODO: change tendonLengthChangeUI to Eigen::Matrix
     int frame_num = 10;
     std::vector<Eigen::VectorXd> tendonLengthDelta;
-    for (int i = 0; i < tendonLengthUI.size(); i++) {
-        Eigen::VectorXd delta = tendonLengthUI[i] - tendonLengthOld[i];
+    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
+        Eigen::VectorXd delta = tendonLengthChangeUI[i] - tendonLengthChangeOld[i];
         delta /= static_cast<double>(frame_num);
         tendonLengthDelta.push_back(delta);
     }
     std::vector<Eigen::VectorXd> tendonLengthFrame;
-    for (int i = 0; i < tendonLengthUI.size(); i++) {
-        Eigen::VectorXd init(tendonLengthOld[i]);
+    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
+        Eigen::VectorXd init(tendonLengthChangeOld[i]);
         tendonLengthFrame.push_back(init);
     }
     for (int frame_count = 0; frame_count < frame_num; frame_count++) {
-        for (int i = 0; i < tendonLengthUI.size(); i++) {
+        for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
             tendonLengthFrame[i] += tendonLengthDelta[i];
         }
         robot.setTendonLength(tendonLengthFrame);
@@ -122,8 +123,8 @@ void MainWindow::on_calculateButton_clicked()
         QCoreApplication::processEvents();  // Notify Qt to update the widget
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-    for (int i = 0; i < tendonLengthUI.size(); i++) {
-        tendonLengthOld[i] = tendonLengthUI[i];
+    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
+        tendonLengthChangeOld[i] = tendonLengthChangeUI[i];
     }
     return;
 }

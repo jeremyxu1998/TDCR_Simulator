@@ -40,21 +40,41 @@ First segment:</string>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="segLenBox_1"/>
+           <widget class="QDoubleSpinBox" name="segLenBox_1">
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_1_1"/>
+         <widget class="QDoubleSpinBox" name="tendon_1_1">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_1_2"/>
+         <widget class="QDoubleSpinBox" name="tendon_1_2">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_1_3"/>
+         <widget class="QDoubleSpinBox" name="tendon_1_3">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_1_4"/>
+         <widget class="QDoubleSpinBox" name="tendon_1_4">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="segLabel_2">
@@ -64,16 +84,32 @@ First segment:</string>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_2_1"/>
+         <widget class="QDoubleSpinBox" name="tendon_2_1">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_2_2"/>
+         <widget class="QDoubleSpinBox" name="tendon_2_2">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_2_3"/>
+         <widget class="QDoubleSpinBox" name="tendon_2_3">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_2_4"/>
+         <widget class="QDoubleSpinBox" name="tendon_2_4">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="segLabel_3">
@@ -83,16 +119,32 @@ First segment:</string>
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_3_1"/>
+         <widget class="QDoubleSpinBox" name="tendon_3_1">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_3_2"/>
+         <widget class="QDoubleSpinBox" name="tendon_3_2">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_3_3"/>
+         <widget class="QDoubleSpinBox" name="tendon_3_3">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="tendon_3_4"/>
+         <widget class="QDoubleSpinBox" name="tendon_3_4">
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="calculateButton">
