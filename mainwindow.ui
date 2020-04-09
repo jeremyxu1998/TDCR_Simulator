@@ -40,11 +40,7 @@ First segment:</string>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="segLenBox_1">
-            <property name="maximum">
-             <double>9999.989999999999782</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="segLenBox_1"/>
           </item>
          </layout>
         </item>
@@ -93,11 +89,7 @@ First segment:</string>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="segLenBox_2">
-            <property name="maximum">
-             <double>9999.989999999999782</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="segLenBox_2"/>
           </item>
          </layout>
         </item>
@@ -146,11 +138,7 @@ First segment:</string>
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="segLenBox_3">
-            <property name="maximum">
-             <double>9999.989999999999782</double>
-            </property>
-           </widget>
+           <widget class="QDoubleSpinBox" name="segLenBox_3"/>
           </item>
          </layout>
         </item>

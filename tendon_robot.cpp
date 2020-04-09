@@ -201,6 +201,16 @@ int TendonRobot::ConstCurvSegment::getTendonNum()
     return m_numTendon;
 }
 
+double TendonRobot::ConstCurvSegment::getMinSegLength()
+{
+    return m_segLength;
+}
+
+double TendonRobot::ConstCurvSegment::getMaxExtSegLength()
+{
+    return m_maxExtLength;
+}
+
 double TendonRobot::ConstCurvSegment::getCurSegLength()
 {
     return (m_segLength + m_curExtLength);

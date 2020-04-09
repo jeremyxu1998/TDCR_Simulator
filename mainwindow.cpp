@@ -15,12 +15,15 @@ MainWindow::MainWindow(QWidget *parent)
     // Robot initialization
     robot.ReadFromXMLFile("test_robot.xml");
     for (int i = 0; i < robot.getNumSegment(); i++) {
+        auto curSeg = robot.getSegments()[i];
         QDoubleSpinBox* targetBbLenBox = (i == 0) ? (ui->segLenBox_1) : ((i == 1) ? (ui->segLenBox_2) : (ui->segLenBox_3));  // TODO: fix hardcode
-        double initSegLen = (robot.getSegments()[i]).getCurSegLength();
+        double initSegLen = curSeg.getCurSegLength();
         segLengthUI.push_back(initSegLen);
         segLengthOld.push_back(initSegLen);
+        targetBbLenBox->setRange(curSeg.getMinSegLength() * 1000.0, curSeg.getMinSegLength() * 1000.0 + curSeg.getMaxExtSegLength() * 1000.0);
         ChangeSpinboxVal(targetBbLenBox, initSegLen);
-        Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero((robot.getSegments()[i]).getTendonNum());
+
+        Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero(curSeg.getTendonNum());
         tendonLengthChangeOld.push_back(segTenLenChg);
         tendonLengthChangeUI.push_back(segTenLenChg);
     }
@@ -148,24 +151,24 @@ void MainWindow::on_calculateButton_clicked()
     return;
 }
 
-void MainWindow::on_segLenSlider_1_valueChanged(int value)
+void MainWindow::on_segLenSlider_1_valueChanged(int val)
 {
-    double length = 70e-3 + 20e-3 * static_cast<double>(value / 1000.0) / static_cast<double>((ui->segLenSlider_1)->maximum());
-    //ui->segLenBox_1->setValue(length);
+    double boxVal = ui->segLenBox_1->minimum() + (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()) * static_cast<double>(val) / static_cast<double>(ui->segLenSlider_1->maximum());
+    //ui->segLenBox_1->setValue(boxVal);
 }
 
 void MainWindow::on_segLenBox_1_valueChanged(double val)
 {
-    int sliderVal = static_cast<int>((val / 1000.0 - 0.07) / 0.0002);
-    // TODO: bound check
-    //printf("%d\n",sliderVal);
-    ui->segLenSlider_1->setValue(sliderVal);
     segLengthUI[0] = val / 1000.0;
+    int sliderVal = static_cast<int>((val - ui->segLenBox_1->minimum()) * static_cast<double>(ui->segLenSlider_1->maximum()) / (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()));
+    ui->segLenSlider_1->setValue(sliderVal);
 }
 
 void MainWindow::on_segLenBox_2_valueChanged(double val)
 {
     segLengthUI[1] = val / 1000.0;
+    int sliderVal = static_cast<int>((val - ui->segLenBox_2->minimum()) * static_cast<double>(ui->segLenSlider_2->maximum()) / (ui->segLenBox_2->maximum() - ui->segLenBox_2->minimum()));
+    ui->segLenSlider_2->setValue(sliderVal);
 }
 
 void MainWindow::on_segLenBox_3_valueChanged(double val)

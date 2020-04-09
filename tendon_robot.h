@@ -32,6 +32,8 @@ private:
 
         int getDiskNum();
         int getTendonNum();
+        double getMinSegLength();
+        double getMaxExtSegLength();
         double getCurSegLength();  // TODO: change function name
         double getPitchRadius();
         double getDiskRadius();
