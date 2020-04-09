@@ -15,11 +15,16 @@ MainWindow::MainWindow(QWidget *parent)
     // Robot initialization
     robot.ReadFromXMLFile("test_robot.xml");
     for (int i = 0; i < robot.getNumSegment(); i++) {
+        QDoubleSpinBox* targetBbLenBox = (i == 0) ? (ui->segLenBox_1) : ((i == 1) ? (ui->segLenBox_2) : (ui->segLenBox_3));  // TODO: fix hardcode
+        double initSegLen = (robot.getSegments()[i]).getCurSegLength();
+        segLengthUI.push_back(initSegLen);
+        segLengthOld.push_back(initSegLen);
+        ChangeSpinboxVal(targetBbLenBox, initSegLen);
         Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero((robot.getSegments()[i]).getTendonNum());
         tendonLengthChangeOld.push_back(segTenLenChg);
         tendonLengthChangeUI.push_back(segTenLenChg);
     }
-    robot.setTendonLength(tendonLengthChangeUI);
+    robot.setTendonLength(tendonLengthChangeUI, segLengthUI);
     controller.AddRobot(robot);
 
     // TODO: cleaner way to initialize
@@ -103,29 +108,43 @@ void MainWindow::on_calculateButton_clicked()
     // TODO: animation speed based on tendon contraction speed?
     // TODO: change tendonLengthChangeUI to Eigen::Matrix
     int frame_num = 10;
+    assert(tendonLengthChangeUI.size() == segLengthUI.size());
+    int numSegment = tendonLengthChangeUI.size();
+
     std::vector<Eigen::VectorXd> tendonLengthDelta;
-    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
-        Eigen::VectorXd delta = tendonLengthChangeUI[i] - tendonLengthChangeOld[i];
-        delta /= static_cast<double>(frame_num);
-        tendonLengthDelta.push_back(delta);
+    std::vector<double> segLengthDelta;
+    for (int i = 0; i < numSegment; i++) {
+        Eigen::VectorXd tendonDelta = tendonLengthChangeUI[i] - tendonLengthChangeOld[i];
+        tendonDelta /= static_cast<double>(frame_num);
+        tendonLengthDelta.push_back(tendonDelta);
+        double segDelta = (segLengthUI[i] - segLengthOld[i]) / static_cast<double>(frame_num);
+        segLengthDelta.push_back(segDelta);
     }
+
     std::vector<Eigen::VectorXd> tendonLengthFrame;
-    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
-        Eigen::VectorXd init(tendonLengthChangeOld[i]);
-        tendonLengthFrame.push_back(init);
+    std::vector<double> segLengthFrame;
+    for (int i = 0; i < numSegment; i++) {
+        Eigen::VectorXd tendonInit(tendonLengthChangeOld[i]);
+        tendonLengthFrame.push_back(tendonInit);
+        segLengthFrame.push_back(segLengthOld[i]);
     }
+
     for (int frame_count = 0; frame_count < frame_num; frame_count++) {
-        for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
+        for (int i = 0; i < numSegment; i++) {
             tendonLengthFrame[i] += tendonLengthDelta[i];
+            segLengthFrame[i] += segLengthDelta[i];
         }
-        robot.setTendonLength(tendonLengthFrame);
+        robot.setTendonLength(tendonLengthFrame, segLengthFrame);
         visualizer->UpdateVisualization(robot.getAllDisksPose());
         QCoreApplication::processEvents();  // Notify Qt to update the widget
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-    for (int i = 0; i < tendonLengthChangeUI.size(); i++) {
+
+    for (int i = 0; i < numSegment; i++) {
         tendonLengthChangeOld[i] = tendonLengthChangeUI[i];
+        segLengthOld[i] = segLengthUI[i];
     }
+
     return;
 }
 
@@ -141,4 +160,15 @@ void MainWindow::on_segLenBox_1_valueChanged(double val)
     // TODO: bound check
     //printf("%d\n",sliderVal);
     ui->segLenSlider_1->setValue(sliderVal);
+    segLengthUI[0] = val / 1000.0;
+}
+
+void MainWindow::on_segLenBox_2_valueChanged(double val)
+{
+    segLengthUI[1] = val / 1000.0;
+}
+
+void MainWindow::on_segLenBox_3_valueChanged(double val)
+{
+    // segLengthUI[2] = val / 1000.0;
 }

@@ -16,7 +16,7 @@ public:
     Eigen::Matrix4d & getTipPose();
     std::vector<Eigen::Matrix4d> getAllDisksPose();
 
-    bool setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange);
+    bool setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange, const std::vector<double> robotSegLength);
 
 private:
     class ConstCurvSegment
@@ -32,6 +32,7 @@ private:
 
         int getDiskNum();
         int getTendonNum();
+        double getCurSegLength();  // TODO: change function name
         double getPitchRadius();
         double getDiskRadius();
         double getDiskThickness();
@@ -40,7 +41,7 @@ private:
         Eigen::Matrix4d & getSegTipPose();
         std::vector<Eigen::Matrix4d> getSegDisksPose();
 
-        bool ForwardKinematics(const Eigen::VectorXd tendonLengthChange);
+        bool ForwardKinematics(const Eigen::VectorXd tendonLengthChange, const double curSegLength);
     private:
         // Property
         double m_segLength;  // l_j = m_segLength + m_curExtLength

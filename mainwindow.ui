@@ -84,6 +84,24 @@ First segment:</string>
          </widget>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="segLen_2">
+          <item>
+           <widget class="QSlider" name="segLenSlider_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="segLenBox_2">
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QDoubleSpinBox" name="tendon_2_1">
           <property name="minimum">
            <double>-99.989999999999995</double>
@@ -117,6 +135,24 @@ First segment:</string>
            <string>Third segment:</string>
           </property>
          </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="segLen_3">
+          <item>
+           <widget class="QSlider" name="segLenSlider_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="segLenBox_3">
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="QDoubleSpinBox" name="tendon_3_1">

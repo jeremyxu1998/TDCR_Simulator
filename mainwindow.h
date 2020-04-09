@@ -37,12 +37,18 @@ private slots:
 
     void on_segLenSlider_1_valueChanged(int value);
 
-    void on_segLenBox_1_valueChanged(double arg1);
+    void on_segLenBox_1_valueChanged(double val);
+
+    void on_segLenBox_2_valueChanged(double val);
+
+    void on_segLenBox_3_valueChanged(double val);
 
 private:
     Ui::MainWindow *ui;
 
     TendonRobot robot;
+    std::vector<double> segLengthUI;
+    std::vector<double> segLengthOld;  // Record previous backbone length for animation
     std::vector<Eigen::VectorXd> tendonLengthChangeUI;
     std::vector<Eigen::VectorXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     RobotController controller;

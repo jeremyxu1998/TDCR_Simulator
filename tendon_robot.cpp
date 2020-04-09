@@ -145,15 +145,15 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
     return allDisksPose;
 }
 
-bool TendonRobot::setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange)
+bool TendonRobot::setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange, const std::vector<double> robotSegLength)
 {
     // Input size check
-    if (robotTendonLengthChange.size() != m_numSegment) {
+    if (robotTendonLengthChange.size() != m_numSegment || robotSegLength.size() != m_numSegment) {
         return false;
     }
 
     for (int j = 0; j < m_numSegment; j++) {
-        if (!m_segments[j].ForwardKinematics(robotTendonLengthChange[j])) {
+        if (!m_segments[j].ForwardKinematics(robotTendonLengthChange[j], robotSegLength[j])) {
             // TODO: error/failure handling
             return false;
         }
@@ -201,6 +201,11 @@ int TendonRobot::ConstCurvSegment::getTendonNum()
     return m_numTendon;
 }
 
+double TendonRobot::ConstCurvSegment::getCurSegLength()
+{
+    return (m_segLength + m_curExtLength);
+}
+
 double TendonRobot::ConstCurvSegment::getPitchRadius()
 {
     return m_pitchRadius;
@@ -233,10 +238,9 @@ std::vector<Eigen::Matrix4d> TendonRobot::ConstCurvSegment::getSegDisksPose()
     return m_diskPose;
 }
 
-bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tendonLengthChange)
+bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tendonLengthChange, const double curSegLength)
 {
     Eigen::VectorXd q;
-    double curSegLength = m_segLength + m_curExtLength;  // l_j
     if (tendonLengthChange.rows() == m_numTendon) {
         q = tendonLengthChange;
         // check sum of delta = 0
@@ -248,6 +252,13 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tend
     else {
         return false;
     }
+    double curExtLength = curSegLength - m_segLength;  // l_j
+    // check extension not exceeding maximum
+    if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
+        return false;
+    }
+    m_curExtLength = curExtLength;
+
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
