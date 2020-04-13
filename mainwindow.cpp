@@ -151,12 +151,6 @@ void MainWindow::on_calculateButton_clicked()
     return;
 }
 
-void MainWindow::on_segLenSlider_1_valueChanged(int val)
-{
-    double boxVal = ui->segLenBox_1->minimum() + (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()) * static_cast<double>(val) / static_cast<double>(ui->segLenSlider_1->maximum());
-    //ui->segLenBox_1->setValue(boxVal);
-}
-
 void MainWindow::on_segLenBox_1_valueChanged(double val)
 {
     segLengthUI[0] = val / 1000.0;
@@ -174,4 +168,21 @@ void MainWindow::on_segLenBox_2_valueChanged(double val)
 void MainWindow::on_segLenBox_3_valueChanged(double val)
 {
     // segLengthUI[2] = val / 1000.0;
+}
+
+void MainWindow::on_segLenSlider_1_valueChanged(int value)
+{
+    double boxVal = ui->segLenBox_1->minimum() + (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()) * static_cast<double>(value) / static_cast<double>(ui->segLenSlider_1->maximum());
+    ui->segLenBox_1->setValue(boxVal);
+}
+
+void MainWindow::on_segLenSlider_2_valueChanged(int value)
+{
+    double boxVal = ui->segLenBox_2->minimum() + (ui->segLenBox_2->maximum() - ui->segLenBox_2->minimum()) * static_cast<double>(value) / static_cast<double>(ui->segLenSlider_2->maximum());
+    ui->segLenBox_2->setValue(boxVal);
+}
+
+void MainWindow::on_segLenSlider_3_valueChanged(int value)
+{
+
 }

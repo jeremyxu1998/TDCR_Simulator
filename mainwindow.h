@@ -33,15 +33,14 @@ private slots:
     void on_tendon_2_3_valueChanged(double val);
     void on_tendon_2_4_valueChanged(double val);
 
-    void on_calculateButton_clicked();
-
-    void on_segLenSlider_1_valueChanged(int value);
-
     void on_segLenBox_1_valueChanged(double val);
-
     void on_segLenBox_2_valueChanged(double val);
-
     void on_segLenBox_3_valueChanged(double val);
+    void on_segLenSlider_1_valueChanged(int value);
+    void on_segLenSlider_2_valueChanged(int value);
+    void on_segLenSlider_3_valueChanged(int value);
+
+    void on_calculateButton_clicked();
 
 private:
     Ui::MainWindow *ui;
