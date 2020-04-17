@@ -14,35 +14,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Robot initialization
     robot.ReadFromXMLFile("test_robot.xml");
-    for (int i = 0; i < robot.getNumSegment(); i++) {
-        auto curSeg = robot.getSegments()[i];
-        QDoubleSpinBox* targetBbLenBox = (i == 0) ? (ui->segLenBox_1) : ((i == 1) ? (ui->segLenBox_2) : (ui->segLenBox_3));  // TODO: fix hardcode
-        double initSegLen = curSeg.getCurSegLength();
-        segLengthUI.push_back(initSegLen);
-        segLengthOld.push_back(initSegLen);
-        targetBbLenBox->setRange(curSeg.getMinSegLength() * 1000.0, curSeg.getMinSegLength() * 1000.0 + curSeg.getMaxExtSegLength() * 1000.0);
-        ChangeSpinboxVal(targetBbLenBox, initSegLen);
-
-        Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero(curSeg.getTendonNum());
-        tendonLengthChangeOld.push_back(segTenLenChg);
-        tendonLengthChangeUI.push_back(segTenLenChg);
-    }
+    initializeRobotConfig(robot);
     robot.setTendonLength(tendonLengthChangeUI, segLengthUI);
     controller.AddRobot(robot);
-
-    // TODO: cleaner way to initialize
-    ChangeSpinboxVal(ui->tendon_3_1, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=1 ? tendonLengthChangeUI[2][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_2, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=2 ? tendonLengthChangeUI[2][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_3, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=3 ? tendonLengthChangeUI[2][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_3_4, (tendonLengthChangeUI.size() > 2 && tendonLengthChangeUI[2].size()>=4 ? tendonLengthChangeUI[2][3] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_1, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=1 ? tendonLengthChangeUI[1][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_2, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=2 ? tendonLengthChangeUI[1][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_3, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=3 ? tendonLengthChangeUI[1][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_2_4, (tendonLengthChangeUI.size() > 1 && tendonLengthChangeUI[1].size()>=4 ? tendonLengthChangeUI[1][3] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_1, (tendonLengthChangeUI[0].size()>=1 ? tendonLengthChangeUI[0][0] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_2, (tendonLengthChangeUI[0].size()>=2 ? tendonLengthChangeUI[0][1] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_3, (tendonLengthChangeUI[0].size()>=3 ? tendonLengthChangeUI[0][2] : -1.0));
-    ChangeSpinboxVal(ui->tendon_1_4, (tendonLengthChangeUI[0].size()>=4 ? tendonLengthChangeUI[0][3] : -1.0));
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robot);
@@ -56,54 +30,66 @@ MainWindow::~MainWindow()
     delete visualizer;
 }
 
-void MainWindow::ChangeSpinboxVal(QDoubleSpinBox* box, double value)
+void MainWindow::initializeRobotConfig(TendonRobot & robot)
 {
-    if (value >= 0.0) {
-        box->setValue(value * 1000.0);
+    for (int seg = 0; seg < robot.getNumSegment(); seg++) {
+        auto curSeg = robot.getSegments()[seg];
+
+        // Init backbone length to be no extension
+        double initSegLen = curSeg.getCurSegLength();
+        segLengthUI.push_back(initSegLen);
+        segLengthOld.push_back(initSegLen);
+
+        // Init tendon length change to be zero
+        Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero(curSeg.getTendonNum());
+        tendonLengthChangeUI.push_back(segTenLenChg);
+        tendonLengthChangeOld.push_back(segTenLenChg);
     }
-    else {
-        box->setEnabled(false);
+
+    // Set GUI inital state, assume robot config smaller than UI file defined, i.e. 3 segments, 4 tendons per segment
+    for (int seg = 0; seg < 3; seg++) {
+        QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
+        QString bbSliderName = "segLenSlider_" + QString::number(seg + 1);
+        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        QSlider* bbLenSlider = ui->verticalLayoutWidget->findChild<QSlider *>(bbSliderName);
+        if (bbLenBox != nullptr && bbLenSlider != nullptr) {
+            if (seg < segLengthUI.size()) {
+                auto curSeg = robot.getSegments()[seg];
+                bbLenBox->setRange(curSeg.getMinSegLength() * 1000.0, curSeg.getMinSegLength() * 1000.0 + curSeg.getMaxExtSegLength() * 1000.0);
+                connect(bbLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                        [=](double d){
+                            segLengthUI[seg] = d / 1000.0;
+                            int sliderVal = static_cast<int>((d - bbLenBox->minimum()) * static_cast<double>(bbLenSlider->maximum()) / (bbLenBox->maximum() - bbLenBox->minimum()));
+                            bbLenSlider->setValue(sliderVal);
+                        });
+                connect(bbLenSlider, &QSlider::valueChanged,
+                        [=](int i){
+                            double boxVal = bbLenBox->minimum() + (bbLenBox->maximum() - bbLenBox->minimum()) * static_cast<double>(i) / static_cast<double>(bbLenSlider->maximum());
+                            bbLenBox->setValue(boxVal);
+                        });
+                bbLenBox->setValue(segLengthUI[seg] * 1000.0);
+            }
+            else {
+                bbLenBox->setEnabled(false);
+                bbLenSlider->setEnabled(false);
+            }
+        }
+
+        for (int tend = 0; tend < 4; tend++) {
+            QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
+            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            if (tenLenBox != nullptr) {
+                if (seg < tendonLengthChangeUI.size() && tend < tendonLengthChangeUI[seg].size()) {
+                    connect(tenLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                        [=](double d){ tendonLengthChangeUI[seg][tend] = d / 1000.0; });
+                    tenLenBox->setValue(tendonLengthChangeUI[seg][tend] * 1000.0);
+                }
+                else {
+                    tenLenBox->setEnabled(false);
+                }
+            }
+        }
     }
-}
-
-void MainWindow::on_tendon_1_1_valueChanged(double val)
-{
-    tendonLengthChangeUI[0][0] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_1_2_valueChanged(double val)
-{
-    tendonLengthChangeUI[0][1] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_1_3_valueChanged(double val)
-{
-    tendonLengthChangeUI[0][2] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_1_4_valueChanged(double val)
-{
-    tendonLengthChangeUI[0][3] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_2_1_valueChanged(double val)
-{
-    tendonLengthChangeUI[1][0] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_2_2_valueChanged(double val)
-{
-    tendonLengthChangeUI[1][1] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_2_3_valueChanged(double val)
-{
-    tendonLengthChangeUI[1][2] = val / 1000.0;
-}
-
-void MainWindow::on_tendon_2_4_valueChanged(double val)
-{
-    tendonLengthChangeUI[1][3] = val / 1000.0;
 }
 
 void MainWindow::on_calculateButton_clicked()
@@ -149,40 +135,4 @@ void MainWindow::on_calculateButton_clicked()
     }
 
     return;
-}
-
-void MainWindow::on_segLenBox_1_valueChanged(double val)
-{
-    segLengthUI[0] = val / 1000.0;
-    int sliderVal = static_cast<int>((val - ui->segLenBox_1->minimum()) * static_cast<double>(ui->segLenSlider_1->maximum()) / (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()));
-    ui->segLenSlider_1->setValue(sliderVal);
-}
-
-void MainWindow::on_segLenBox_2_valueChanged(double val)
-{
-    segLengthUI[1] = val / 1000.0;
-    int sliderVal = static_cast<int>((val - ui->segLenBox_2->minimum()) * static_cast<double>(ui->segLenSlider_2->maximum()) / (ui->segLenBox_2->maximum() - ui->segLenBox_2->minimum()));
-    ui->segLenSlider_2->setValue(sliderVal);
-}
-
-void MainWindow::on_segLenBox_3_valueChanged(double val)
-{
-    // segLengthUI[2] = val / 1000.0;
-}
-
-void MainWindow::on_segLenSlider_1_valueChanged(int value)
-{
-    double boxVal = ui->segLenBox_1->minimum() + (ui->segLenBox_1->maximum() - ui->segLenBox_1->minimum()) * static_cast<double>(value) / static_cast<double>(ui->segLenSlider_1->maximum());
-    ui->segLenBox_1->setValue(boxVal);
-}
-
-void MainWindow::on_segLenSlider_2_valueChanged(int value)
-{
-    double boxVal = ui->segLenBox_2->minimum() + (ui->segLenBox_2->maximum() - ui->segLenBox_2->minimum()) * static_cast<double>(value) / static_cast<double>(ui->segLenSlider_2->maximum());
-    ui->segLenBox_2->setValue(boxVal);
-}
-
-void MainWindow::on_segLenSlider_3_valueChanged(int value)
-{
-
 }

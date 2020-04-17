@@ -24,22 +24,6 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_tendon_1_1_valueChanged(double val);
-    void on_tendon_1_2_valueChanged(double val);
-    void on_tendon_1_3_valueChanged(double val);
-    void on_tendon_1_4_valueChanged(double val);
-    void on_tendon_2_1_valueChanged(double val);
-    void on_tendon_2_2_valueChanged(double val);
-    void on_tendon_2_3_valueChanged(double val);
-    void on_tendon_2_4_valueChanged(double val);
-
-    void on_segLenBox_1_valueChanged(double val);
-    void on_segLenBox_2_valueChanged(double val);
-    void on_segLenBox_3_valueChanged(double val);
-    void on_segLenSlider_1_valueChanged(int value);
-    void on_segLenSlider_2_valueChanged(int value);
-    void on_segLenSlider_3_valueChanged(int value);
-
     void on_calculateButton_clicked();
 
 private:
@@ -53,6 +37,6 @@ private:
     RobotController controller;
     VtkVisualizer* visualizer;
 
-    void ChangeSpinboxVal(QDoubleSpinBox* box, double value);
+    void initializeRobotConfig(TendonRobot & robot);
 };
 #endif // MAINWINDOW_H
