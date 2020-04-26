@@ -44,6 +44,8 @@ void MainWindow::initializeRobotConfig(TendonRobot & robot)
         Eigen::VectorXd segTenLenChg = Eigen::VectorXd::Zero(curSeg.getTendonNum());
         tendonLengthChangeUI.push_back(segTenLenChg);
         tendonLengthChangeOld.push_back(segTenLenChg);
+        std::vector<bool> segTenLenMod(curSeg.getTendonNum(), false);
+        tendonLengthChangeMod.push_back(segTenLenMod);
     }
 
     // Set GUI inital state, assume robot config smaller than UI file defined, i.e. 3 segments, 4 tendons per segment
@@ -59,6 +61,7 @@ void MainWindow::initializeRobotConfig(TendonRobot & robot)
                 connect(bbLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
                         [=](double d){
                             segLengthUI[seg] = d / 1000.0;
+                            bbLenBox->setStyleSheet("background-color: lightyellow;");
                             int sliderVal = static_cast<int>((d - bbLenBox->minimum()) * static_cast<double>(bbLenSlider->maximum()) / (bbLenBox->maximum() - bbLenBox->minimum()));
                             bbLenSlider->setValue(sliderVal);
                         });
@@ -81,13 +84,33 @@ void MainWindow::initializeRobotConfig(TendonRobot & robot)
             if (tenLenBox != nullptr) {
                 if (seg < tendonLengthChangeUI.size() && tend < tendonLengthChangeUI[seg].size()) {
                     connect(tenLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-                        [=](double d){ tendonLengthChangeUI[seg][tend] = d / 1000.0; });
+                        [=](double d){ updateSingleTendon(seg, tend, d, tenLenBox); });
                     tenLenBox->setValue(tendonLengthChangeUI[seg][tend] * 1000.0);
                 }
                 else {
                     tenLenBox->setEnabled(false);
                 }
             }
+        }
+    }
+}
+
+void MainWindow::updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox)
+{
+    tendonLengthChangeUI[seg][tend] = newLenChg / 1000.0;
+
+    tendonLengthChangeMod[seg][tend] = true;
+    tenLenBox->setStyleSheet("background-color: lightyellow;");
+
+    int lastTenIndex = tendonLengthChangeUI[seg].size() - 1;
+    int numMod = std::accumulate(tendonLengthChangeMod[seg].begin(), tendonLengthChangeMod[seg].end(), 0) - static_cast<int>(tendonLengthChangeMod[seg].back());
+    // If all other tendons are modified (and not currently changing last tendon), auto update last tendon value
+    if (tend != lastTenIndex && numMod == tendonLengthChangeMod[seg].size() - 1) {
+        double autoLastLenChg = -(tendonLengthChangeUI[seg].sum() - tendonLengthChangeUI[seg][lastTenIndex]);
+        QString lastBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(lastTenIndex + 1);
+        QDoubleSpinBox* lastLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(lastBoxName);
+        if (lastLenBox != nullptr) {
+            lastLenBox->setValue(autoLastLenChg * 1000.0);
         }
     }
 }
@@ -134,5 +157,18 @@ void MainWindow::on_calculateButton_clicked()
         segLengthOld[i] = segLengthUI[i];
     }
 
+    // Reset last tendon auto-update, and spinbox mod in UI
+    for (int seg = 0; seg < numSegment; seg++) {
+        QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
+        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        bbLenBox->setStyleSheet("background-color: white;");
+        for (int tend = 0; tend < tendonLengthChangeUI[seg].size(); tend++) {
+            tendonLengthChangeMod[seg][tend] = false;
+            QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
+            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            tenLenBox->setStyleSheet("background-color: white;");
+        }
+    }
+    
     return;
 }

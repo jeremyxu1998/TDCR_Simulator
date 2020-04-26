@@ -34,9 +34,11 @@ private:
     std::vector<double> segLengthOld;  // Record previous backbone length for animation
     std::vector<Eigen::VectorXd> tendonLengthChangeUI;
     std::vector<Eigen::VectorXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
+    std::vector<std::vector<bool>> tendonLengthChangeMod;  // Record if each value is modified
     RobotController controller;
     VtkVisualizer* visualizer;
 
     void initializeRobotConfig(TendonRobot & robot);
+    void updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
 };
 #endif // MAINWINDOW_H
