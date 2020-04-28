@@ -45,6 +45,11 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
     }
     diskActors[0]->GetProperty()->SetColor(0.0, 0.8, 0.0);  // Test visualization purpose
 
+    // (Each value in segTendonNum) = (# tendons actuating this segment) + (# tendons passing through here actuating above segments)
+    for (int seg = segmentNum - 2; seg >= 0 ; seg--) {
+        segTendonNum[seg] += segTendonNum[seg + 1];
+    }
+
     backboneSpline = vtkSmartPointer<vtkParametricSpline>::New();
     backboneFunctionSource = vtkSmartPointer<vtkParametricFunctionSource>::New();
     backboneFunctionSource->SetParametricFunction(backboneSpline);
@@ -78,7 +83,7 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
             tendonMappers[segCount].push_back(tendonMapper);
             vtkNew<vtkActor> tendonActor;
             tendonActor->SetMapper(tendonMapper);
-            // tendonActor->GetProperty()->SetColor(0.1, 0.1, 0.1);
+            tendonActor->GetProperty()->SetColor(0.1, 0.1, 0.1);
             tendonActors[segCount].push_back(tendonActor);
         }
         tendonActors[segCount][0]->GetProperty()->SetColor(1,0,0);
@@ -140,13 +145,18 @@ bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPos
 
     unsigned segBaseDiskCount = 0;
     for (unsigned segCount = 0; segCount < segTendonNum.size(); segCount++) {
+        // Note: tendons are sequenced from outer to inner (current segment to upper segments)
+        unsigned tendonActuSeg = segCount;  // Which segment this tendon is actuating
+        unsigned segActuTendonCount = 0;  // Sequence of this tendon in that segment
+        unsigned segActuTendonNum = segTendonNum[tendonActuSeg] - (tendonActuSeg >= segTendonNum.size() - 1 ? 0 : segTendonNum[tendonActuSeg + 1]);  // # of actuating tendon in that segment
         for (unsigned tendonCount = 0; tendonCount < segTendonNum[segCount]; tendonCount++) {
             vtkNew<vtkPoints> tendonPoints;
+            double radialAngle = segActuTendonCount * 2.0 * M_PI / static_cast<double>(segActuTendonNum);
+            double radius = segPitchRad[tendonActuSeg];
             for (unsigned diskCount = 0; diskCount < segDiskNum[segCount]; diskCount++) {
                 Eigen::Vector4d tendonPosRel;  // Position of the tendon hole relative to disk center
-                double radius = segPitchRad[segCount];
-                tendonPosRel << radius * cos(tendonCount * 2.0 * M_PI / static_cast<double>(segTendonNum[segCount])),
-                                radius * sin(tendonCount * 2.0 * M_PI / static_cast<double>(segTendonNum[segCount])),
+                tendonPosRel << radius * cos(radialAngle),
+                                radius * sin(radialAngle),
                                 0.0,
                                 1.0;
                 Eigen::Vector4d tendonPosWorld = allDisksPose[segBaseDiskCount + diskCount] * tendonPosRel;
@@ -155,6 +165,14 @@ bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPos
             }
             tendonLines[segCount][tendonCount]->SetPoints(tendonPoints);
             tendonTubeFilters[segCount][tendonCount]->Update();
+
+            segActuTendonCount++;
+            // Move on to tendons for the next actuating segment
+            if (segActuTendonCount == segActuTendonNum) {
+                tendonActuSeg++;
+                segActuTendonCount = 0;
+                segActuTendonNum = segTendonNum[tendonActuSeg] - (tendonActuSeg >= segTendonNum.size() - 1 ? 0 : segTendonNum[tendonActuSeg + 1]);
+            }
         }
         segBaseDiskCount += segDiskNum[segCount];
     }
