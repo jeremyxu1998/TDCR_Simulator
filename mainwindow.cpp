@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <thread>
+#include <QKeyEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -11,6 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     QCoreApplication::setApplicationName("Tendon Robot Simulator");
     setWindowTitle(QCoreApplication::applicationName());
+    installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
     robot.ReadFromXMLFile("test_robot.xml");
@@ -112,6 +114,23 @@ void MainWindow::updateSingleTendon(int seg, int tend, double newLenChg, QDouble
         if (lastLenBox != nullptr) {
             lastLenBox->setValue(autoLastLenChg * 1000.0);
         }
+    }
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent* key = static_cast<QKeyEvent*>(event);
+        if ((key->key() == Qt::Key_Enter) || (key->key() == Qt::Key_Return)) {
+            on_calculateButton_clicked();
+        }
+        else {
+            return QObject::eventFilter(obj, event);
+        }
+        return true;
+    }
+    else {
+        return QObject::eventFilter(obj, event);
     }
 }
 
