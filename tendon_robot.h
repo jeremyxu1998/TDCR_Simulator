@@ -73,6 +73,7 @@ private:
     int m_numSegment;  // j
     std::vector<ConstCurvSegment> m_segments;
     
+    Eigen::Matrix4d m_basePose;
     Eigen::Matrix4d m_tipPose;
     bool SetFromDomElement(QDomElement const& elem);
 };

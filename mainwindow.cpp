@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    robot.ReadFromXMLFile("test_robot.xml");
+    robot.ReadFromXMLFile("test_multiple_robots.xml");
     initializeRobotConfig(robot);
     robot.setTendonLength(tendonLengthChangeUI, segLengthUI);
     controller.AddRobot(robot);
@@ -172,6 +172,6 @@ void MainWindow::on_calculateButton_clicked()
             tenLenBox->setStyleSheet("background-color: white;");
         }
     }
-    
+
     return;
 }

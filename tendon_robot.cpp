@@ -65,6 +65,39 @@ bool TendonRobot::SetFromDomElement(QDomElement const& elem)
     }
     assert(!hasNumberOfSegmentsAttribute || numberOfSegs >= minimumNumberOfSegs);
 
+    // Query robot base pose
+    m_basePose = Eigen::Matrix4d::Identity();
+    QDomNodeList baseNodes = elem.elementsByTagName("Base");
+    if (baseNodes.length() > 0) {
+        QDomNode baseNode = baseNodes.at(0);
+        double x_base = baseNode.firstChildElement("X").text().toDouble();
+        double y_base = baseNode.firstChildElement("Y").text().toDouble();
+        double z_base = baseNode.firstChildElement("Z").text().toDouble();
+
+        Eigen::Vector3d basePos;
+        basePos << x_base / 1000.0,
+                   y_base / 1000.0,
+                   z_base / 1000.0;
+        m_basePose.block(0, 3, 3, 1) = basePos;
+
+        double roll_base = (baseNode.firstChildElement("Roll").text().toDouble()) * M_PI / 180.0;
+        double pitch_base = (baseNode.firstChildElement("Pitch").text().toDouble()) * M_PI / 180.0;
+        double yaw_base = (baseNode.firstChildElement("Yaw").text().toDouble()) * M_PI / 180.0;
+
+        Eigen::Matrix3d rollRot, pitchRot, yawRot, baseRot;
+        rollRot << 1, 0, 0,
+                   0, cos(roll_base), -sin(roll_base),
+                   0, sin(roll_base), cos(roll_base);
+        pitchRot << cos(pitch_base), 0, sin(pitch_base),
+                    0, 1, 0,
+                    -sin(pitch_base), 0, cos(pitch_base);
+        yawRot << cos(yaw_base), -sin(yaw_base), 0,
+                  sin(yaw_base), cos(yaw_base), 0,
+                  0, 0, 1;
+        baseRot = yawRot * pitchRot * rollRot;
+        m_basePose.topLeftCorner(3, 3) = baseRot;
+    }
+
     // Get all Segment nodes in the document
     QDomNodeList segNodes = elem.elementsByTagName("Segment");
     qDebug() << QString("Number of Segment Elements:") << segNodes.length();
@@ -124,7 +157,7 @@ Eigen::Matrix4d & TendonRobot::getTipPose()
 std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
 {
     std::vector<Eigen::Matrix4d> allDisksPose;
-    Eigen::Matrix4d curBasePose = Eigen::Matrix4d::Identity();
+    Eigen::Matrix4d curBasePose = m_basePose;
     for (int j = 0; j < m_numSegment; j++) {
         std::vector<Eigen::Matrix4d> curSegPoses = m_segments[j].getSegDisksPose();
         for (int diskCount = 0; diskCount < curSegPoses.size(); diskCount++) {
