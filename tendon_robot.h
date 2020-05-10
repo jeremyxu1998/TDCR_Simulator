@@ -16,7 +16,7 @@ public:
     Eigen::Matrix4d & getTipPose();
     std::vector<Eigen::Matrix4d> getAllDisksPose();
 
-    bool setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange, const std::vector<double> robotSegLength);
+    bool setTendonLength(const Eigen::MatrixXd robotTendonLengthChange, const Eigen::VectorXd robotSegLength);
 
 private:
     class ConstCurvSegment

@@ -33,11 +33,11 @@ private:
     Ui::MainWindow *ui;
 
     TendonRobot robot;
-    std::vector<double> segLengthUI;
-    std::vector<double> segLengthOld;  // Record previous backbone length for animation
-    std::vector<Eigen::VectorXd> tendonLengthChangeUI;
-    std::vector<Eigen::VectorXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
-    std::vector<std::vector<bool>> tendonLengthChangeMod;  // Record if each value is modified
+    Eigen::VectorXd segLengthUI;
+    Eigen::VectorXd segLengthOld;  // Record previous backbone length for animation
+    Eigen::MatrixXd tendonLengthChangeUI;
+    Eigen::MatrixXd tendonLengthChangeOld;  // Record previous tendon length change for animation
+    Eigen::MatrixXi tendonLengthChangeMod;  // Record if each value is modified
     RobotController controller;
     VtkVisualizer* visualizer;
 

@@ -1,8 +1,8 @@
-<TendonRobot NumberOfSegments="2" Name="TestTendonRobot">
+<TendonRobot NumberOfSegments="3" Name="TestTendonRobot">
     <Segment Number="1" Type="ConstantCurvatureSegment">
         <BackboneLength>70</BackboneLength>
         <ExtendLength>30</ExtendLength>
-        <NumTendon>3</NumTendon>
+        <NumTendon>4</NumTendon>
         <NumDisk>8</NumDisk>
         <PitchRadius>2.5</PitchRadius>
         <DiskRadius>2.7</DiskRadius>
@@ -13,7 +13,7 @@
     <Segment Number="2" Type="ConstantCurvatureSegment">
         <BackboneLength>50</BackboneLength>
         <ExtendLength>20</ExtendLength>
-        <NumTendon>3</NumTendon>
+        <NumTendon>4</NumTendon>
         <NumDisk>6</NumDisk>
         <PitchRadius>2.0</PitchRadius>
         <DiskRadius>2.7</DiskRadius>
@@ -21,26 +21,15 @@
         <InitialCurvature>0.0</InitialCurvature>
         <InitialRotAngle>0.0</InitialRotAngle>
     </Segment>
-    <!-- <Tube Number="2" Type="StraightCurvedTube">
-        <TotalLength>311e-3</TotalLength>
-        <OuterDiameter>1.68e-3</OuterDiameter>
-        <InnerDiameter>1.35e-3</InnerDiameter>
-        <YoungsModulus>50e+9</YoungsModulus>
-        <PoissonsRatio>0.3</PoissonsRatio>
-        <StraightLength>241.1e-3</StraightLength>
-        <CurvatureX>5.0</CurvatureX>
-        <CurvatureY>0</CurvatureY>
-        <CurvatureZ>0</CurvatureZ>
-    </Tube>
-    <Tube Number="3" Type="StraightCurvedTube">
-        <TotalLength>151e-3</TotalLength>
-        <OuterDiameter>2.32e-3</OuterDiameter>
-        <InnerDiameter>1.87e-3</InnerDiameter>
-        <YoungsModulus>50e+9</YoungsModulus>
-        <PoissonsRatio>0.3</PoissonsRatio>
-        <StraightLength>82.4e-3</StraightLength>
-        <CurvatureX>1.5</CurvatureX>
-        <CurvatureY>0</CurvatureY>
-        <CurvatureZ>0</CurvatureZ>
-    </Tube> -->
+    <Segment Number="3" Type="ConstantCurvatureSegment">
+        <BackboneLength>50</BackboneLength>
+        <ExtendLength>20</ExtendLength>
+        <NumTendon>4</NumTendon>
+        <NumDisk>6</NumDisk>
+        <PitchRadius>1.8</PitchRadius>
+        <DiskRadius>2.7</DiskRadius>
+        <DiskThickness>0.5</DiskThickness>
+        <InitialCurvature>0.0</InitialCurvature>
+        <InitialRotAngle>0.0</InitialRotAngle>
+    </Segment>
 </TendonRobot>

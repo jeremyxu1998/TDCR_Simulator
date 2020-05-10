@@ -145,15 +145,16 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
     return allDisksPose;
 }
 
-bool TendonRobot::setTendonLength(const std::vector<Eigen::VectorXd> robotTendonLengthChange, const std::vector<double> robotSegLength)
+bool TendonRobot::setTendonLength(const Eigen::MatrixXd robotTendonLengthChange, const Eigen::VectorXd robotSegLength)
 {
     // Input size check
-    if (robotTendonLengthChange.size() != m_numSegment || robotSegLength.size() != m_numSegment) {
+    if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {
         return false;
     }
 
     for (int j = 0; j < m_numSegment; j++) {
-        if (!m_segments[j].ForwardKinematics(robotTendonLengthChange[j], robotSegLength[j])) {
+        Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
+        if (!m_segments[j].ForwardKinematics(segTendonLengthChange, robotSegLength[j])) {
             // TODO: error/failure handling
             return false;
         }
