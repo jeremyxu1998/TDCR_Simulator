@@ -4,6 +4,11 @@
 #include <chrono>
 #include <thread>
 #include <QKeyEvent>
+#include <QDomDocument>
+#include <QDomNodeList>
+#include <QDomNode>
+#include <QFile>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -15,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    robot.ReadFromXMLFile("test_multiple_robots.xml");
+    ReadFromXMLFile("test_multiple_robots.xml");
     initializeRobotConfig(robot);
     robot.setTendonLength(tendonLengthChangeUI, segLengthUI);
     controller.AddRobot(robot);
@@ -30,6 +35,34 @@ MainWindow::~MainWindow()
 {
     delete ui;
     delete visualizer;
+}
+
+bool MainWindow::ReadFromXMLFile(QString const& fileName)
+{
+    QFile can_file(fileName);
+    if (!can_file.open(QIODevice::ReadOnly)) {
+        QString msg("Cannot open xml file: ");
+        msg.append(fileName);
+        throw std::runtime_error(msg.toLocal8Bit().data());
+    }
+    QDomDocument xml;
+    if (!xml.setContent(&can_file)) {
+        QString msg("Xml file content format error: ");
+        msg.append(fileName);
+        throw std::runtime_error(msg.toLocal8Bit().data());
+    }
+    can_file.close();
+
+    QDomElement rootElem = xml.documentElement();
+    QDomNodeList robotElemList = rootElem.elementsByTagName("TendonRobot");
+    qDebug() << QString("Number of robots") << robotElemList.length();
+    QDomElement robotElem = robotElemList.at(0).toElement();
+    try {
+        robot.SetFromDomElement(robotElem);
+    } catch (std::invalid_argument const& e) {
+        throw std::runtime_error(e.what());
+    }
+    return true;
 }
 
 void MainWindow::initializeRobotConfig(TendonRobot & robot)

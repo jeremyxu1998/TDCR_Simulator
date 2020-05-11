@@ -12,11 +12,12 @@ public:
     TendonRobot();
     ~TendonRobot();
 
-    bool ReadFromXMLFile(QString const& fileName);
+    bool SetFromDomElement(QDomElement const& elem);
+
     Eigen::Matrix4d & getTipPose();
     std::vector<Eigen::Matrix4d> getAllDisksPose();
 
-    bool setTendonLength(const Eigen::MatrixXd robotTendonLengthChange, const Eigen::VectorXd robotSegLength);
+    bool setTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
 
 private:
     class ConstCurvSegment
@@ -41,9 +42,9 @@ private:
         double getPhi();
 
         Eigen::Matrix4d & getSegTipPose();
-        std::vector<Eigen::Matrix4d> getSegDisksPose();
+        std::vector<Eigen::Matrix4d> & getSegDisksPose();
 
-        bool ForwardKinematics(const Eigen::VectorXd tendonLengthChange, const double curSegLength);
+        bool ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
     private:
         // Property
         double m_segLength;  // l_j = m_segLength + m_curExtLength
@@ -75,7 +76,6 @@ private:
     
     Eigen::Matrix4d m_basePose;
     Eigen::Matrix4d m_tipPose;
-    bool SetFromDomElement(QDomElement const& elem);
 };
 
 #endif // TENDON_ROBOT_H

@@ -41,6 +41,7 @@ private:
     RobotController controller;
     VtkVisualizer* visualizer;
 
+    bool ReadFromXMLFile(QString const& fileName);
     void initializeRobotConfig(TendonRobot & robot);
     void updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
 };

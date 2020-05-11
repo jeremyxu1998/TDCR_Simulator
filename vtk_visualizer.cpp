@@ -123,7 +123,7 @@ QVTKOpenGLNativeWidget* VtkVisualizer::getWidget()
     return widget;
 }
 
-bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPose)
+bool VtkVisualizer::UpdateVisualization(const std::vector<Eigen::Matrix4d> & allDisksPose)
 {
     if (allDisksPose.size() != diskMappers.size()) {
         return false;
@@ -181,7 +181,7 @@ bool VtkVisualizer::UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPos
     return true;
 }
 
-bool VtkVisualizer::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d pose)
+bool VtkVisualizer::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose)
 {
     Eigen::Matrix4d vtkDisplayMat;
     vtkDisplayMat << 1.0, 0.0, 0.0, 0.0,

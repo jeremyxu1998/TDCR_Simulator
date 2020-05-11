@@ -31,7 +31,7 @@ public:
     ~VtkVisualizer();
 
     QVTKOpenGLNativeWidget* getWidget();
-    bool UpdateVisualization(std::vector<Eigen::Matrix4d> allDisksPose);
+    bool UpdateVisualization(const std::vector<Eigen::Matrix4d> & allDisksPose);
 
 private:
     QVTKOpenGLNativeWidget* widget;
@@ -58,7 +58,7 @@ private:
     std::vector<unsigned> segTendonNum;
     std::vector<double> segPitchRad;
 
-    bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d pose);
+    bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose);
 };
 
 #endif // VTK_VISUALIZER_H

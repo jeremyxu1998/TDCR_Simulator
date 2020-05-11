@@ -1,6 +1,5 @@
 #include "tendon_robot.h"
 #include <math.h>
-#include <QDomDocument>
 #include <QDomNodeList>
 #include <QDomNode>
 #include <QDebug>
@@ -14,31 +13,6 @@ TendonRobot::TendonRobot()
 
 TendonRobot::~TendonRobot()
 {
-}
-
-bool TendonRobot::ReadFromXMLFile(QString const& fileName)
-{
-    QFile can_file(fileName);
-    if (!can_file.open(QIODevice::ReadOnly)) {
-        QString msg("Cannot open xml file: ");
-        msg.append(fileName);
-        throw std::runtime_error(msg.toLocal8Bit().data());
-    }
-    QDomDocument xml;
-    if (!xml.setContent(&can_file)) {
-        QString msg("Xml file content format error: ");
-        msg.append(fileName);
-        throw std::runtime_error(msg.toLocal8Bit().data());
-    }
-    can_file.close();
-
-    QDomElement robot_elem = xml.elementsByTagName("TendonRobot").at(0).toElement();
-    try {
-        SetFromDomElement(robot_elem);
-    } catch (std::invalid_argument const& e) {
-        throw std::runtime_error(e.what());
-    }
-    return true;
 }
 
 bool TendonRobot::SetFromDomElement(QDomElement const& elem)
@@ -178,7 +152,7 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
     return allDisksPose;
 }
 
-bool TendonRobot::setTendonLength(const Eigen::MatrixXd robotTendonLengthChange, const Eigen::VectorXd robotSegLength)
+bool TendonRobot::setTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength)
 {
     // Input size check
     if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {
@@ -275,14 +249,12 @@ Eigen::Matrix4d & TendonRobot::ConstCurvSegment::getSegTipPose()
     return m_segTipPose;
 }
 
-std::vector<Eigen::Matrix4d> TendonRobot::ConstCurvSegment::getSegDisksPose()
+std::vector<Eigen::Matrix4d> & TendonRobot::ConstCurvSegment::getSegDisksPose()
 {
-    // TODO: verify the way of returning, when does it copy
-    // return std::vector<Eigen::Matrix4d> res(m_diskPose.begin(), m_diskPose.end());
     return m_diskPose;
 }
 
-bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd tendonLengthChange, const double curSegLength)
+bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength)
 {
     Eigen::VectorXd q;
     if (tendonLengthChange.rows() == m_numTendon) {

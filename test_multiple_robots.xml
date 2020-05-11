@@ -1,32 +1,67 @@
-<TendonRobot NumberOfSegments="2" Name="TendonRobot#1">
-    <Base>
-        <X>75.0</X>
-        <Y>-129.90381</Y>
-        <Z>0.0</Z>
-        <Roll>-90.0</Roll>
-        <Pitch>-90.0</Pitch>
-        <Yaw>30.0</Yaw>
-    </Base>
-    <Segment Number="1" Type="ConstantCurvatureSegment">
-        <BackboneLength>70</BackboneLength>
-        <ExtendLength>30</ExtendLength>
-        <NumTendon>3</NumTendon>
-        <NumDisk>8</NumDisk>
-        <PitchRadius>2.5</PitchRadius>
-        <DiskRadius>2.7</DiskRadius>
-        <DiskThickness>0.5</DiskThickness>
-        <InitialCurvature>0.0</InitialCurvature>
-        <InitialRotAngle>0.0</InitialRotAngle>
-    </Segment>
-    <Segment Number="2" Type="ConstantCurvatureSegment">
-        <BackboneLength>50</BackboneLength>
-        <ExtendLength>20</ExtendLength>
-        <NumTendon>3</NumTendon>
-        <NumDisk>6</NumDisk>
-        <PitchRadius>2.0</PitchRadius>
-        <DiskRadius>2.7</DiskRadius>
-        <DiskThickness>0.5</DiskThickness>
-        <InitialCurvature>0.0</InitialCurvature>
-        <InitialRotAngle>0.0</InitialRotAngle>
-    </Segment>
-</TendonRobot>
+<TACREnvironemnt>
+    <TendonRobot NumberOfSegments="2" Name="TendonRobot#1">
+        <Base>
+            <X>75.0</X>
+            <Y>-129.90381</Y>
+            <Z>0.0</Z>
+            <Roll>0.0</Roll>
+            <Pitch>-90.0</Pitch>
+            <Yaw>-60.0</Yaw>
+        </Base>
+        <Segment Number="1" Type="ConstantCurvatureSegment">
+            <BackboneLength>70</BackboneLength>
+            <ExtendLength>30</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>8</NumDisk>
+            <PitchRadius>2.5</PitchRadius>
+            <DiskRadius>2.7</DiskRadius>
+            <DiskThickness>0.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+        <Segment Number="2" Type="ConstantCurvatureSegment">
+            <BackboneLength>50</BackboneLength>
+            <ExtendLength>20</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>6</NumDisk>
+            <PitchRadius>2.0</PitchRadius>
+            <DiskRadius>2.7</DiskRadius>
+            <DiskThickness>0.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+    </TendonRobot>
+
+    <TendonRobot NumberOfSegments="2" Name="TendonRobot#2">
+        <Base>
+            <X>75.0</X>
+            <Y>129.90381</Y>
+            <Z>0.0</Z>
+            <Roll>0.0</Roll>
+            <Pitch>-90.0</Pitch>
+            <Yaw>60.0</Yaw>
+        </Base>
+        <Segment Number="1" Type="ConstantCurvatureSegment">
+            <BackboneLength>70</BackboneLength>
+            <ExtendLength>30</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>8</NumDisk>
+            <PitchRadius>2.5</PitchRadius>
+            <DiskRadius>2.7</DiskRadius>
+            <DiskThickness>0.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+        <Segment Number="2" Type="ConstantCurvatureSegment">
+            <BackboneLength>50</BackboneLength>
+            <ExtendLength>20</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>6</NumDisk>
+            <PitchRadius>2.0</PitchRadius>
+            <DiskRadius>2.7</DiskRadius>
+            <DiskThickness>0.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+    </TendonRobot>
+</TACREnvironemnt>
