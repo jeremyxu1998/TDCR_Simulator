@@ -9,13 +9,63 @@
 #include <vtkCamera.h>
 #include <vtkPoints.h>
 
-VtkVisualizer::VtkVisualizer(TendonRobot & robot)
+VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
 {
     // VTK OpenGL Visualizer
     widget = new QVTKOpenGLNativeWidget();
     renderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
     widget->SetRenderWindow(renderWindow);
 
+    for (int robotCount = 0; robotCount < robots.size(); robotCount++) {
+        TACRVisual robotVisual = TACRVisual(robots[robotCount]);
+        robotsVisual.emplace_back(robotVisual);
+    }
+
+    renderer = vtkSmartPointer<vtkRenderer>::New();
+    // initial camera view
+    vtkNew<vtkCamera> camera;
+    camera->SetPosition(0.2, 0.0, 0.3);
+    camera->Roll(-90);
+    camera->SetFocalPoint(0.0, 0.0, 0.06);
+    renderer->SetActiveCamera(camera);
+
+    for (int robotCount = 0; robotCount < robots.size(); robotCount++) {
+        for (int i = 0; i < robotsVisual[robotCount].diskActors.size(); i++) {
+            renderer->AddActor(robotsVisual[robotCount].diskActors[i]);
+        }
+        renderer->AddActor(robotsVisual[robotCount].backboneActor);
+        for (unsigned segCount = 0; segCount < robotsVisual[robotCount].segDiskNum.size(); segCount++) {
+            for (unsigned tendonCount = 0; tendonCount < robotsVisual[robotCount].segTendonNum[segCount]; tendonCount++) {
+                renderer->AddActor(robotsVisual[robotCount].tendonActors[segCount][tendonCount]);
+            }
+        }
+    }
+
+    renderer->SetBackground(1.0, 1.0, 1.0);
+    renderWindow->AddRenderer(renderer);
+}
+
+VtkVisualizer::~VtkVisualizer()
+{
+    delete widget;
+}
+
+QVTKOpenGLNativeWidget* VtkVisualizer::getWidget()
+{
+    return widget;
+}
+
+bool VtkVisualizer::UpdateVisualization(const std::vector<std::vector<Eigen::Matrix4d> > & allDisksPose)
+{
+    for (int robotCount = 0; robotCount < allDisksPose.size(); robotCount++) {
+        robotsVisual[robotCount].UpdateRobotVisualization(allDisksPose[robotCount]);
+    }
+    renderWindow->Render();
+    return true;
+}
+
+VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
+{
     unsigned segmentNum = robot.getSegments().size();
 
     for (unsigned segCount = 0; segCount < segmentNum; segCount++) {
@@ -90,51 +140,20 @@ VtkVisualizer::VtkVisualizer(TendonRobot & robot)
         tendonActors[segCount][1]->GetProperty()->SetColor(0,1,0);
         tendonActors[segCount][2]->GetProperty()->SetColor(0,0,1);
     }
-
-    renderer = vtkSmartPointer<vtkRenderer>::New();
-    // initial camera view
-    vtkNew<vtkCamera> camera;
-    camera->SetPosition(0.2, 0.0, 0.3);
-    camera->Roll(-90);
-    camera->SetFocalPoint(0.0, 0.0, 0.06);
-    renderer->SetActiveCamera(camera);
-
-    for (int i = 0; i < diskActors.size(); i++) {
-        renderer->AddActor(diskActors[i]);
-    }
-    renderer->AddActor(backboneActor);
-    for (unsigned segCount = 0; segCount < segmentNum; segCount++) {
-        for (unsigned tendonCount = 0; tendonCount < segTendonNum[segCount]; tendonCount++) {
-            renderer->AddActor(tendonActors[segCount][tendonCount]);
-        }
-    }
-    //renderer->AddActor(tendonActors[0][0]);
-    renderer->SetBackground(1.0, 1.0, 1.0);
-    renderWindow->AddRenderer(renderer);
 }
 
-VtkVisualizer::~VtkVisualizer()
+bool VtkVisualizer::TACRVisual::UpdateRobotVisualization(const std::vector<Eigen::Matrix4d> & robotDisksPose)
 {
-    delete widget;
-}
-
-QVTKOpenGLNativeWidget* VtkVisualizer::getWidget()
-{
-    return widget;
-}
-
-bool VtkVisualizer::UpdateVisualization(const std::vector<Eigen::Matrix4d> & allDisksPose)
-{
-    if (allDisksPose.size() != diskMappers.size()) {
+    if (robotDisksPose.size() != diskMappers.size()) {
         return false;
     }
     vtkNew<vtkPoints> backbonePoints;
-    for (int i = 0; i < allDisksPose.size(); i++) {
-        if (!SetDiskPose(diskActors[i], allDisksPose[i])) {
+    for (int i = 0; i < robotDisksPose.size(); i++) {
+        if (!SetDiskPose(diskActors[i], robotDisksPose[i])) {
             return false;  // TODO: detailed error handling
         }
 
-        Eigen::Vector3d diskCenter = allDisksPose[i].block(0, 3, 3, 1);
+        Eigen::Vector3d diskCenter = robotDisksPose[i].block(0, 3, 3, 1);
         double diskCenterRaw[3];
         Eigen::Vector3d::Map(diskCenterRaw, diskCenter.rows()) = diskCenter;
         backbonePoints->InsertNextPoint(diskCenterRaw);
@@ -159,7 +178,7 @@ bool VtkVisualizer::UpdateVisualization(const std::vector<Eigen::Matrix4d> & all
                                 radius * sin(radialAngle),
                                 0.0,
                                 1.0;
-                Eigen::Vector4d tendonPosWorld = allDisksPose[segBaseDiskCount + diskCount] * tendonPosRel;
+                Eigen::Vector4d tendonPosWorld = robotDisksPose[segBaseDiskCount + diskCount] * tendonPosRel;
                 double point[3] = {tendonPosWorld(0), tendonPosWorld(1), tendonPosWorld(2)};
                 tendonPoints->InsertNextPoint(point);
             }
@@ -177,11 +196,10 @@ bool VtkVisualizer::UpdateVisualization(const std::vector<Eigen::Matrix4d> & all
         segBaseDiskCount += segDiskNum[segCount];
     }
 
-    renderWindow->Render();
     return true;
 }
 
-bool VtkVisualizer::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose)
+bool VtkVisualizer::TACRVisual::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose)
 {
     Eigen::Matrix4d vtkDisplayMat;
     vtkDisplayMat << 1.0, 0.0, 0.0, 0.0,

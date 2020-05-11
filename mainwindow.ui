@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>694</height>
+    <height>772</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,6 +22,31 @@
       </property>
       <widget class="QWidget" name="verticalLayoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <layout class="QHBoxLayout" name="robotSelect">
+          <item>
+           <widget class="QRadioButton" name="robot_1_Radio">
+            <property name="text">
+             <string>Robot 1</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="robot_2_Radio">
+            <property name="text">
+             <string>Robot 2</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="robot_3_Radio">
+            <property name="text">
+             <string>Robot 3</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item>
          <widget class="QLabel" name="segLabel_1">
           <property name="text">

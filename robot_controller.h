@@ -13,8 +13,7 @@ public:
     bool AddRobot(TendonRobot & robot);
 
 private:
-    TendonRobot m_robot;
-    // std::vector<TendonRobot> robotList;
+    std::vector<TendonRobot> robotList;
 };
 
 #endif // ROBOT_CONTROLLER_H

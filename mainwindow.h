@@ -9,6 +9,7 @@
 #include "vtk_visualizer.h"
 
 #include <QSplitter>
+#include <QButtonGroup>
 #include <QDoubleSpinBox>
 
 QT_BEGIN_NAMESPACE
@@ -31,18 +32,21 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    QButtonGroup robotSelectBtnGroup;
+    int selectedRobotId;
 
-    TendonRobot robot;
-    Eigen::VectorXd segLengthUI;
-    Eigen::VectorXd segLengthOld;  // Record previous backbone length for animation
-    Eigen::MatrixXd tendonLengthChangeUI;
-    Eigen::MatrixXd tendonLengthChangeOld;  // Record previous tendon length change for animation
-    Eigen::MatrixXi tendonLengthChangeMod;  // Record if each value is modified
+    std::vector<TendonRobot> robots;
+    std::vector<Eigen::VectorXd> segLengthUI;
+    std::vector<Eigen::VectorXd> segLengthOld;  // Record previous backbone length for animation
+    std::vector<Eigen::MatrixXd> tendonLengthChangeUI;
+    std::vector<Eigen::MatrixXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
+    std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
+
     RobotController controller;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);
-    void initializeRobotConfig(TendonRobot & robot);
+    void initializeRobotConfig(TendonRobot & robot, int robotId);
     void updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
 };
 #endif // MAINWINDOW_H

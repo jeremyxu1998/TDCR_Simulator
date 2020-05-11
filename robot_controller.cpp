@@ -11,6 +11,5 @@ RobotController::~RobotController()
 
 bool RobotController::AddRobot(TendonRobot & robot)
 {
-    // robotList.push_back(robot);
-    m_robot = robot;
+    robotList.push_back(robot);
 }

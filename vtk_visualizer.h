@@ -27,38 +27,49 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 class VtkVisualizer
 {
 public:
-    VtkVisualizer(TendonRobot & robot);
+    VtkVisualizer(std::vector<TendonRobot> & robots);
     ~VtkVisualizer();
 
     QVTKOpenGLNativeWidget* getWidget();
-    bool UpdateVisualization(const std::vector<Eigen::Matrix4d> & allDisksPose);
+    bool UpdateVisualization(const std::vector<std::vector<Eigen::Matrix4d>> & allDisksPose);
 
 private:
     QVTKOpenGLNativeWidget* widget;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow;
     vtkSmartPointer<vtkRenderer> renderer;
 
-    std::vector<vtkSmartPointer<vtkCylinderSource>> diskSources;  // size: seg_num
-    std::vector<vtkSmartPointer<vtkPolyDataMapper>> diskMappers;  // size: total_disk_num
-    std::vector<vtkSmartPointer<vtkActor>> diskActors;  // size: total_disk_num
+    class TACRVisual
+    {
+    public:
+        TACRVisual(TendonRobot & robot);
 
-    vtkSmartPointer<vtkParametricSpline> backboneSpline;
-    vtkSmartPointer<vtkParametricFunctionSource> backboneFunctionSource;
-    vtkSmartPointer<vtkTubeFilter> backboneTubeFilter;
-    vtkSmartPointer<vtkPolyDataMapper> backboneMapper;
-    vtkSmartPointer<vtkActor> backboneActor;
+        std::vector<vtkSmartPointer<vtkCylinderSource>> diskSources;  // size: seg_num
+        std::vector<vtkSmartPointer<vtkPolyDataMapper>> diskMappers;  // size: total_disk_num
+        std::vector<vtkSmartPointer<vtkActor>> diskActors;  // size: total_disk_num
 
-    std::vector<std::vector< vtkSmartPointer<vtkLineSource> >> tendonLines;  // size: seg_num * tendon_num
-    std::vector<std::vector< vtkSmartPointer<vtkTubeFilter> >> tendonTubeFilters;
-    std::vector<std::vector< vtkSmartPointer<vtkPolyDataMapper> >> tendonMappers;
-    std::vector<std::vector< vtkSmartPointer<vtkActor> >> tendonActors;
+        vtkSmartPointer<vtkParametricSpline> backboneSpline;
+        vtkSmartPointer<vtkParametricFunctionSource> backboneFunctionSource;
+        vtkSmartPointer<vtkTubeFilter> backboneTubeFilter;
+        vtkSmartPointer<vtkPolyDataMapper> backboneMapper;
+        vtkSmartPointer<vtkActor> backboneActor;
 
-    // Helper data stuctures to store robot property details
-    std::vector<unsigned> segDiskNum;  // size: seg_num
-    std::vector<unsigned> segTendonNum;
-    std::vector<double> segPitchRad;
+        std::vector<std::vector< vtkSmartPointer<vtkLineSource> >> tendonLines;  // size: seg_num * tendon_num
+        std::vector<std::vector< vtkSmartPointer<vtkTubeFilter> >> tendonTubeFilters;
+        std::vector<std::vector< vtkSmartPointer<vtkPolyDataMapper> >> tendonMappers;
+        std::vector<std::vector< vtkSmartPointer<vtkActor> >> tendonActors;
 
-    bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose);
+        // Helper data stuctures to store robot property details
+        std::vector<unsigned> segDiskNum;  // size: seg_num
+        std::vector<unsigned> segTendonNum;
+        std::vector<double> segPitchRad;
+
+        bool UpdateRobotVisualization(const std::vector<Eigen::Matrix4d> & robotDisksPose);
+        bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose);
+    };
+
+private:
+    int numRobots;
+    std::vector<TACRVisual> robotsVisual;
 };
 
 #endif // VTK_VISUALIZER_H
