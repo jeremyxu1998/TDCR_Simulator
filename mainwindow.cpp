@@ -22,13 +22,14 @@ MainWindow::MainWindow(QWidget *parent)
     // Robot initialization
     ReadFromXMLFile("test_multiple_robots.xml");
     for (int i = 0; i < robots.size(); i++) {
-        initializeRobotConfig(robots[i], i);
-        robots[i].setTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
+        InitializeRobotConfig(robots[i], i);
+        robots[i].SetTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
         controller.AddRobot(robots[i]);
     }
     connect(&robotSelectBtnGroup, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
             [=](int id){
                 selectedRobotId = id - 1;
+                SwitchRobotInput();
             });
     ui->robot_1_Radio->setChecked(true);
     selectedRobotId = 0;
@@ -37,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     visualizer = new VtkVisualizer(robots);
     std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;
     for (int i = 0; i < robots.size(); i++) {
-        allDisksPose.emplace_back(robots[i].getAllDisksPose());
+        allDisksPose.emplace_back(robots[i].GetAllDisksPose());
     }
     visualizer->UpdateVisualization(allDisksPose);
     ui->mainSplitter->addWidget(visualizer->getWidget());
@@ -82,7 +83,7 @@ bool MainWindow::ReadFromXMLFile(QString const& fileName)
     return true;
 }
 
-void MainWindow::initializeRobotConfig(TendonRobot & robot, int robotId)
+void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
 {
     // Note: we assume that each segment has the same number of tendons and they are aligned
     // If this doesn't hold, Eigen::MatrixXd will need to change back to std::vector<Eigen::VectorXd>
@@ -151,7 +152,9 @@ void MainWindow::initializeRobotConfig(TendonRobot & robot, int robotId)
                 if (tenLenBox != nullptr) {
                     if (seg < segNum && tend < tenNum) {
                         connect(tenLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-                            [=](double d){ updateSingleTendon(seg, tend, d, tenLenBox); });
+                            [=](double d){
+                                UpdateSingleTendon(seg, tend, d, tenLenBox);
+                            });
                         tenLenBox->setValue(tendonLengthChangeUI[robotId](seg, tend) * 1000.0);
                     }
                     else {
@@ -163,7 +166,7 @@ void MainWindow::initializeRobotConfig(TendonRobot & robot, int robotId)
     }
 }
 
-void MainWindow::updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox)
+void MainWindow::UpdateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox)
 {
     tendonLengthChangeUI[selectedRobotId](seg, tend) = newLenChg / 1000.0;
 
@@ -179,6 +182,62 @@ void MainWindow::updateSingleTendon(int seg, int tend, double newLenChg, QDouble
         QDoubleSpinBox* lastLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(lastBoxName);
         if (lastLenBox != nullptr) {
             lastLenBox->setValue(autoLastLenChg * 1000.0);
+        }
+    }
+}
+
+void MainWindow::SwitchRobotInput()
+{
+    int segNum = robots[selectedRobotId].getNumSegment();
+    int tenNum = robots[selectedRobotId].getSegments()[0].getTendonNum();
+
+    // Similar process to GUI initialization, but doesn't need to connect() again
+    for (int seg = 0; seg < 3; seg++) {
+        QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
+        QString bbSliderName = "segLenSlider_" + QString::number(seg + 1);
+        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        QSlider* bbLenSlider = ui->verticalLayoutWidget->findChild<QSlider *>(bbSliderName);
+        if (bbLenBox != nullptr && bbLenSlider != nullptr) {
+            if (seg < segNum) {
+                bbLenBox->setEnabled(true);
+                bbLenSlider->setEnabled(true);
+                auto curSeg = robots[selectedRobotId].getSegments()[seg];
+                bbLenBox->setRange(curSeg.getMinSegLength() * 1000.0, curSeg.getMinSegLength() * 1000.0 + curSeg.getMaxExtSegLength() * 1000.0);
+                bbLenBox->setValue(segLengthUI[selectedRobotId](seg) * 1000.0);
+                // Update spinbox modify indication
+                if (fabs(segLengthUI[selectedRobotId](seg) - segLengthOld[selectedRobotId](seg)) < EPSILON) {
+                    bbLenBox->setStyleSheet("background-color: white;");
+                }
+                else {
+                    bbLenBox->setStyleSheet("background-color: lightyellow;");
+                }
+            }
+            else {
+                bbLenBox->setEnabled(false);
+                bbLenSlider->setEnabled(false);
+            }
+        }
+
+        for (int tend = 0; tend < 4; tend++) {
+            QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
+            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            if (tenLenBox != nullptr) {
+                if (seg < segNum && tend < tenNum) {
+                    tenLenBox->setEnabled(true);
+                    tenLenBox->setValue(tendonLengthChangeUI[selectedRobotId](seg, tend) * 1000.0);
+                    if (fabs(tendonLengthChangeUI[selectedRobotId](seg, tend) - tendonLengthChangeOld[selectedRobotId](seg, tend)) < EPSILON) {
+                        tendonLengthChangeMod[selectedRobotId](seg, tend) = 0;
+                        tenLenBox->setStyleSheet("background-color: white;");
+                    }
+                    else {
+                        tendonLengthChangeMod[selectedRobotId](seg, tend) = 1;
+                        tenLenBox->setStyleSheet("background-color: lightyellow;");
+                    }
+                }
+                else {
+                    tenLenBox->setEnabled(false);
+                }
+            }
         }
     }
 }
@@ -227,8 +286,8 @@ void MainWindow::on_calculateButton_clicked()
         for (int robot_count = 0; robot_count < robots.size(); robot_count++) {
             tendonLengthFrame[robot_count] += tendonLengthDelta[robot_count];
             segLengthFrame[robot_count] += segLengthDelta[robot_count];
-            robots[robot_count].setTendonLength(tendonLengthFrame[robot_count], segLengthFrame[robot_count]);
-            allDisksPose.emplace_back(robots[robot_count].getAllDisksPose());
+            robots[robot_count].SetTendonLength(tendonLengthFrame[robot_count], segLengthFrame[robot_count]);
+            allDisksPose.emplace_back(robots[robot_count].GetAllDisksPose());
         }
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget

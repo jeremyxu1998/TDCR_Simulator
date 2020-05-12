@@ -46,7 +46,8 @@ private:
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);
-    void initializeRobotConfig(TendonRobot & robot, int robotId);
-    void updateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
+    void InitializeRobotConfig(TendonRobot & robot, int robotId);
+    void UpdateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
+    void SwitchRobotInput();  // When clicking radio button, reset input GUI to stored value of that robot
 };
 #endif // MAINWINDOW_H

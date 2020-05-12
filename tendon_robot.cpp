@@ -5,8 +5,6 @@
 #include <QDebug>
 #include <QFile>
 
-#define EPSILON 1e-7
-
 TendonRobot::TendonRobot()
 {
 }
@@ -119,7 +117,7 @@ bool TendonRobot::SetFromDomElement(QDomElement const& elem)
     return true;
 }
 
-Eigen::Matrix4d & TendonRobot::getTipPose()
+Eigen::Matrix4d & TendonRobot::GetTipPose()
 {
     m_tipPose = Eigen::Matrix4d::Identity();
     for (int j = 0; j < m_numSegment; j++) {
@@ -128,7 +126,7 @@ Eigen::Matrix4d & TendonRobot::getTipPose()
     return m_tipPose;
 }
 
-std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
+std::vector<Eigen::Matrix4d> TendonRobot::GetAllDisksPose()
 {
     std::vector<Eigen::Matrix4d> allDisksPose;
     Eigen::Matrix4d curBasePose = m_basePose;
@@ -152,7 +150,7 @@ std::vector<Eigen::Matrix4d> TendonRobot::getAllDisksPose()
     return allDisksPose;
 }
 
-bool TendonRobot::setTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength)
+bool TendonRobot::SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength)
 {
     // Input size check
     if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {

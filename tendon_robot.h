@@ -6,6 +6,8 @@
 #include <QDomElement>
 #include <Eigen/Dense>
 
+#define EPSILON 1e-7
+
 class TendonRobot
 {
 public:
@@ -14,10 +16,10 @@ public:
 
     bool SetFromDomElement(QDomElement const& elem);
 
-    Eigen::Matrix4d & getTipPose();
-    std::vector<Eigen::Matrix4d> getAllDisksPose();
+    Eigen::Matrix4d & GetTipPose();
+    std::vector<Eigen::Matrix4d> GetAllDisksPose();
 
-    bool setTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
+    bool SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
 
 private:
     class ConstCurvSegment
