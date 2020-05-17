@@ -21,6 +21,13 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
         robotsVisual.emplace_back(robotVisual);
     }
 
+    originAxes = vtkSmartPointer<vtkAxesActor>::New();
+    originAxes->SetTotalLength(0.03, 0.03, 0.03);
+    originAxes->SetShaftTypeToCylinder();
+    originAxes->SetCylinderRadius(0.04);
+    originAxes->SetConeRadius(0.4);
+    originAxes->AxisLabelsOff();
+
     renderer = vtkSmartPointer<vtkRenderer>::New();
     // initial camera view
     vtkNew<vtkCamera> camera;
@@ -39,7 +46,10 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
                 renderer->AddActor(robotsVisual[robotCount].tendonActors[segCount][tendonCount]);
             }
         }
+        renderer->AddActor(robotsVisual[robotCount].baseAxes);
+        renderer->AddActor(robotsVisual[robotCount].tipAxes);
     }
+    renderer->AddActor(originAxes);
 
     renderer->SetBackground(1.0, 1.0, 1.0);
     renderWindow->AddRenderer(renderer);
@@ -93,7 +103,6 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
         segTendonNum.push_back(robot.getSegments()[segCount].getTendonNum());
         segPitchRad.push_back(robot.getSegments()[segCount].getPitchRadius());
     }
-    diskActors[0]->GetProperty()->SetColor(0.0, 0.8, 0.0);  // Test visualization purpose
 
     // (Each value in segTendonNum) = (# tendons actuating this segment) + (# tendons passing through here actuating above segments)
     for (int seg = segmentNum - 2; seg >= 0 ; seg--) {
@@ -140,6 +149,20 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
         tendonActors[segCount][1]->GetProperty()->SetColor(0,1,0);
         tendonActors[segCount][2]->GetProperty()->SetColor(0,0,1);
     }
+
+    baseAxes = vtkSmartPointer<vtkAxesActor>::New();
+    tipAxes = vtkSmartPointer<vtkAxesActor>::New();
+    setAxesStyle(baseAxes);
+    setAxesStyle(tipAxes);
+}
+
+void VtkVisualizer::TACRVisual::setAxesStyle(vtkSmartPointer<vtkAxesActor> axes)
+{
+    axes->SetTotalLength(0.02, 0.02, 0.02);
+    axes->SetShaftTypeToCylinder();
+    axes->SetCylinderRadius(0.03);
+    axes->SetConeRadius(0.3);
+    axes->AxisLabelsOff();
 }
 
 bool VtkVisualizer::TACRVisual::UpdateRobotVisualization(const std::vector<Eigen::Matrix4d> & robotDisksPose)
@@ -196,6 +219,9 @@ bool VtkVisualizer::TACRVisual::UpdateRobotVisualization(const std::vector<Eigen
         segBaseDiskCount += segDiskNum[segCount];
     }
 
+    SetAxesPose(baseAxes, robotDisksPose[0]);
+    SetAxesPose(tipAxes, robotDisksPose.back());
+
     return true;
 }
 
@@ -215,6 +241,23 @@ bool VtkVisualizer::TACRVisual::SetDiskPose(vtkSmartPointer<vtkActor> actor, con
         }
     }
     actor->SetUserMatrix(vtkPose);
+
+    return true;
+}
+
+bool VtkVisualizer::TACRVisual::SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, const Eigen::Matrix4d &pose)
+{
+    // Note: axes pose doesn't need to multiply vtkDisplayMat
+    vtkNew<vtkMatrix4x4> vtkPose;
+    // vtkMatrix4x4::DeepCopy() not working as expected, copy element by element instead
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            vtkPose->SetElement(row, col, pose(row,col));
+        }
+    }
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->SetMatrix(vtkPose);
+    axes->SetUserTransform(transform);
 
     return true;
 }

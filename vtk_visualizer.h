@@ -21,6 +21,7 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtkParametricFunctionSource.h>
 #include <vtkLineSource.h>
 #include <vtkTubeFilter.h>
+#include <vtkAxesActor.h>
 #include <vtkActor.h>
 #include <vtkRenderer.h>
 
@@ -58,18 +59,23 @@ private:
         std::vector<std::vector< vtkSmartPointer<vtkPolyDataMapper> >> tendonMappers;
         std::vector<std::vector< vtkSmartPointer<vtkActor> >> tendonActors;
 
+        vtkSmartPointer<vtkAxesActor> baseAxes, tipAxes;
+
         // Helper data stuctures to store robot property details
         std::vector<unsigned> segDiskNum;  // size: seg_num
         std::vector<unsigned> segTendonNum;
         std::vector<double> segPitchRad;
 
+        void setAxesStyle(vtkSmartPointer<vtkAxesActor> axes);
         bool UpdateRobotVisualization(const std::vector<Eigen::Matrix4d> & robotDisksPose);
         bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose);
+        bool SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, const Eigen::Matrix4d & pose);
     };
 
 private:
     int numRobots;
     std::vector<TACRVisual> robotsVisual;
+    vtkSmartPointer<vtkAxesActor> originAxes;
 };
 
 #endif // VTK_VISUALIZER_H
