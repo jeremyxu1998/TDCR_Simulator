@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>772</height>
+    <height>808</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -50,7 +50,8 @@
         <item>
          <widget class="QLabel" name="segLabel_1">
           <property name="text">
-           <string>Tendon Length (mm)
+           <string>Segment Length &amp; Tendon Change (mm)
+
 First segment:</string>
           </property>
          </widget>
@@ -59,6 +60,9 @@ First segment:</string>
          <layout class="QHBoxLayout" name="segLen_1">
           <item>
            <widget class="QSlider" name="segLenSlider_1">
+            <property name="maximum">
+             <number>9999</number>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -108,6 +112,9 @@ First segment:</string>
          <layout class="QHBoxLayout" name="segLen_2">
           <item>
            <widget class="QSlider" name="segLenSlider_2">
+            <property name="maximum">
+             <number>9999</number>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -157,6 +164,9 @@ First segment:</string>
          <layout class="QHBoxLayout" name="segLen_3">
           <item>
            <widget class="QSlider" name="segLenSlider_3">
+            <property name="maximum">
+             <number>9999</number>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>

@@ -3,11 +3,13 @@
 
 #include <chrono>
 #include <thread>
+#include <QFileDialog>
 #include <QKeyEvent>
 #include <QDomDocument>
 #include <QDomNodeList>
 #include <QDomNode>
 #include <QFile>
+#include <QMessageBox>
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -20,7 +22,12 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    ReadFromXMLFile("test_multiple_robots.xml");
+    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "./", tr("XML files (*.xml)"));
+    if (xmlDir.isEmpty()) {
+        QMessageBox::critical(this, "Error", "Robot config file load failed: Invalid input directory. Please restart program.");
+        return;
+    }
+    ReadFromXMLFile(xmlDir);
     for (int i = 0; i < robots.size(); i++) {
         InitializeRobotConfig(robots[i], i);
         robots[i].SetTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
