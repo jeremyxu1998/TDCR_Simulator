@@ -13,14 +13,14 @@ q_i = [q_1_i; q_2_i; d_l_i];
 T_init = Forward(q_i, param);
 
 % Target Configuration
-q_1_t = 5e-3;
-q_2_t = -2e-3;
+q_1_t = 5e-5;
+q_2_t = -2e-5;
 d_l_t = 5e-3;
 q_t = [q_1_t; q_2_t; d_l_t];
 T_target = Forward(q_t, param);
 
 % Sim Parameters
-num_step = 1e5;
+num_step = 1e4;
 q_epsilon = 1e-5;
 P_gain = 1e-3;
 
@@ -35,7 +35,8 @@ Q = double.empty(3,0);
 for step = 1:num_step
     
     Jb = estimateJacobian(q_cur, param, q_epsilon);
-    Jb_pseudo = inv(Jb'*Jb) * Jb'; % NOTE: Formula for a 'wide' Jacobian is different
+    Jb = Jb(4:6,:);
+    % Jb_pseudo = (Jb'*Jb)\Jb'; % NOTE: Formula for a 'wide' Jacobian is different
     
     T_bd = invT(T_cur)*T_target;
     [S, theta] = tfLogMap(T_bd);
@@ -43,8 +44,9 @@ for step = 1:num_step
     v = S(1:3,4);
     
     Vb = [w; v]; % This should be normalized: multiply by theta to get scaled version
+    Vbv = Vb(4:6);
     
-    q_new = q_cur + P_gain*Jb_pseudo*Vb;
+    q_new = q_cur + P_gain*theta*(Jb\Vbv);
     T_cur = Forward(q_new, param);
     q_cur = q_new;
     Q = [Q q_cur];
@@ -60,7 +62,7 @@ for step = 1:num_step
     X = [X x];
     
     % Print intermediate reuslts
-    if mod(step, 1e4) == 0
+    if mod(step, 1e3) == 0
         T_cur
     end
     
