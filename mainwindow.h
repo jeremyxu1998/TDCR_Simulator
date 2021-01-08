@@ -42,7 +42,7 @@ private:
     std::vector<Eigen::MatrixXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
 
-    RobotController controller;
+    BaseController controller;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);

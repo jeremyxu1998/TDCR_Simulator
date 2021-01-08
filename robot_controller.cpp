@@ -1,15 +1,19 @@
 #include "robot_controller.h"
 
-RobotController::RobotController()
+BaseController::BaseController()
 {
-
+    calcFreq = 100;
+    updateFreq = 10;
+    maxTimestep = 1e4;
+    PGain = 1e-3;
 }
 
-RobotController::~RobotController()
+BaseController::~BaseController()
 {
 }
 
-bool RobotController::AddRobot(TendonRobot & robot)
+void BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd &targetTendonLengthChange, const Eigen::VectorXd &targetSegLength)
 {
-    robotList.push_back(robot);
+    Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
+    Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
 }

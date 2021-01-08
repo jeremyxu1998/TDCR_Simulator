@@ -4,16 +4,18 @@
 #include "tendon_robot.h"
 #include <vector>
 
-class RobotController
+class BaseController
 {
 public:
-    RobotController();
-    ~RobotController();
+    BaseController();
+    ~BaseController();
 
-    bool AddRobot(TendonRobot & robot);
+    void PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength);
 
 private:
-    std::vector<TendonRobot> robotList;
+    int calcFreq, updateFreq;
+    int maxTimestep;
+    double PGain;  // Proportional gain
 };
 
 #endif // ROBOT_CONTROLLER_H

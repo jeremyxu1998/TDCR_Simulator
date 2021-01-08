@@ -20,6 +20,8 @@ public:
     std::vector<Eigen::Matrix4d> GetAllDisksPose();
 
     bool SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
+    // Simple version of SetTendonLength(), NOT update robot geometry
+    Eigen::Matrix4d CalcTipPose(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
 
 private:
     class ConstCurvSegment
@@ -47,6 +49,8 @@ private:
         std::vector<Eigen::Matrix4d> & getSegDisksPose();
 
         bool ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
+        // Simple version of FK(), calculate and return tip pose only and does NOT update robot geometry
+        Eigen::Matrix4d ForwardKinematicsSimple(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
     private:
         // Property
         double m_segLength;  // l_j = m_segLength + m_curExtLength

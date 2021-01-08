@@ -31,7 +31,6 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i = 0; i < robots.size(); i++) {
         InitializeRobotConfig(robots[i], i);
         robots[i].SetTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
-        controller.AddRobot(robots[i]);
     }
     connect(&robotSelectBtnGroup, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
             [=](int id){
