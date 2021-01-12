@@ -232,11 +232,6 @@ double TendonRobot::ConstCurvSegment::getMaxExtSegLength()
     return m_maxExtLength;
 }
 
-double TendonRobot::ConstCurvSegment::getCurSegLength()
-{
-    return (m_segLength + m_curExtLength);
-}
-
 double TendonRobot::ConstCurvSegment::getPitchRadius()
 {
     return m_pitchRadius;
@@ -255,6 +250,26 @@ double TendonRobot::ConstCurvSegment::getDiskThickness()
 double TendonRobot::ConstCurvSegment::getPhi()
 {
     return m_twistAngle;
+}
+
+double TendonRobot::ConstCurvSegment::getCurTendonLengthChange(int tendCount)
+{
+    if (tendCount < m_numTendon) {
+        return m_tendonLengthChange[tendCount];
+    }
+    else {
+        return 0;  // TODO: out of range handle
+    }
+}
+
+double TendonRobot::ConstCurvSegment::getCurExtLength()
+{
+    return m_curExtLength;
+}
+
+double TendonRobot::ConstCurvSegment::getCurSegLength()
+{
+    return (m_segLength + m_curExtLength);
 }
 
 Eigen::Matrix4d & TendonRobot::ConstCurvSegment::getSegTipPose()

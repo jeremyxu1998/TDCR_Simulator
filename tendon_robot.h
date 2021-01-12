@@ -39,12 +39,14 @@ private:
         int getTendonNum();
         double getMinSegLength();
         double getMaxExtSegLength();
-        double getCurSegLength();  // TODO: change function name
         double getPitchRadius();
         double getDiskRadius();
         double getDiskThickness();
         double getPhi();
 
+        double getCurTendonLengthChange(int tendCount);
+        double getCurExtLength();
+        double getCurSegLength();  // TODO: change function name
         Eigen::Matrix4d & getSegTipPose();
         std::vector<Eigen::Matrix4d> & getSegDisksPose();
 

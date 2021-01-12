@@ -2,7 +2,7 @@
 #define ROBOT_CONTROLLER_H
 
 #include "tendon_robot.h"
-#include <vector>
+#include <Eigen/Dense>
 
 class BaseController
 {
@@ -14,8 +14,14 @@ public:
 
 private:
     int calcFreq, updateFreq;
+    double qEpsilon;  // small change in q when estimating Jacobian
     int maxTimestep;
     double PGain;  // Proportional gain
+
+    Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);
+    // Eigen::MatrixXd & EstimateJacobian(const Eigen::VectorXd & q_cur);
+    void UnpackRobotConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur,
+                            Eigen::MatrixXd & curTendonLengthChange, Eigen::VectorXd & curSegLength);  // Unpack q to segment parameter matrices
 };
 
 #endif // ROBOT_CONTROLLER_H
