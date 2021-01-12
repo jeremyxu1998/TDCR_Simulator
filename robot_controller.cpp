@@ -13,31 +13,36 @@ BaseController::~BaseController()
 {
 }
 
-void BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd &targetTendonLengthChange, const Eigen::VectorXd &targetSegLength)
+bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+                                    std::vector<Eigen::MatrixXd> & framesTendonLengthChange, std::vector<Eigen::VectorXd> & framesSegLength)
 {
     Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
     Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
 
     Eigen::Matrix4d T_cur = T_init;
-    Eigen::VectorXd q_cur;
+    Eigen::VectorXd q_cur(targetTendonLengthChange.size());
     int numTendon = targetTendonLengthChange.cols();
+    int qCount = 0;
     for (int j = 0; j < robot.getNumSegment(); j++) {  // Pack segment parameter matrices to q
         for (int i = 0; i < numTendon - 1; i++) {
-            q_cur << robot.getSegments()[j].getCurTendonLengthChange(i);
+            q_cur(qCount) = robot.getSegments()[j].getCurTendonLengthChange(i);
+            qCount++;
         }
-        q_cur << robot.getSegments()[j].getCurExtLength();
+        q_cur(qCount) = robot.getSegments()[j].getCurExtLength();
+        qCount++;
     }
     int numDOF = q_cur.size();
-    assert(numDOF == targetTendonLengthChange.size());
 
-    // Some return structure
+    framesTendonLengthChange.clear();
+    framesSegLength.clear();
+    bool planSucceed = false;
 
     for (int step = 0; step < maxTimestep; step++) {
         // Estimate Jacobian
         Eigen::MatrixXd J_body = Eigen::MatrixXd::Zero(6,numDOF);  // Body Jacobian
-        Eigen::MatrixXd curTendonLengthChange;
-        Eigen::VectorXd curSegLength;
+        Eigen::MatrixXd curTendonLengthChange(targetTendonLengthChange.rows(), targetTendonLengthChange.cols());
+        Eigen::VectorXd curSegLength(targetSegLength.size());
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
         assert(curSegLength.size() == targetSegLength.size());
@@ -72,6 +77,7 @@ void BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd &ta
         Eigen::VectorXd twist(6);  // V
         twist << S_skew(2,1), S_skew(0,2), S_skew(1,0),  // omega components
                  S_skew(0,3), S_skew(1,3), S_skew(2,3);  // v components
+        twist *= theta;  // S is normalized, multiply by theta to get twist
         Eigen::VectorXd q_dot = J_body_pseudo * twist;
 
         Eigen::VectorXd q_new = q_cur + q_dot * PGain; // TODO: *theta? Time step length?
@@ -79,13 +85,20 @@ void BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd &ta
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
         q_cur = q_new;
         // Add unpacked configuration at update freq
+        if (step != 0 && step % (calcFreq / updateFreq) == 0) {
+            framesTendonLengthChange.push_back(curTendonLengthChange);
+            framesSegLength.push_back(curSegLength);
+        }
 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
-        if ((p_target - p_cur).norm() < EPSILON) {  // TODO: verify orientation
+        if ((p_target - p_cur).norm() < 1e-4) {  // TODO: verify orientation
+            planSucceed = true;
+            framesTendonLengthChange.push_back(curTendonLengthChange);
+            framesSegLength.push_back(curSegLength);
             break;
         }
     }
-    return;  // return strucutre
+    return planSucceed;
 }
 
 /* Refer to Modern Robotics Textbook, chapter 3.3.3
@@ -123,12 +136,12 @@ void BaseController::UnpackRobotConfig(TendonRobot & robot, int numTendon, const
     for (int j = 0; j < robot.getNumSegment(); j++) {
         double tendonDelta = 0.0;
         for (int i = 0; i < numTendon - 1; i++) {
-            curTendonLengthChange << q_cur(qCount);
+            curTendonLengthChange(j, i) = q_cur(qCount);
             tendonDelta += q_cur(qCount);
             qCount++;
         }
-        curTendonLengthChange << (-tendonDelta);
-        curSegLength << (q_cur(qCount) + robot.getSegments()[j].getMinSegLength());
+        curTendonLengthChange(j, numTendon - 1) = (-tendonDelta);
+        curSegLength(j) = (q_cur(qCount) + robot.getSegments()[j].getMinSegLength());
         qCount++;
     }
 }
