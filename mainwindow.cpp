@@ -285,7 +285,7 @@ void MainWindow::on_calculateButton_clicked()
         // }
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     tendonLengthChangeOld = tendonLengthChangeUI;

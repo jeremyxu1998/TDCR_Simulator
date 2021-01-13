@@ -70,20 +70,23 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
             J_body.col(i) = J_bi;
         }
 
-        Eigen::MatrixXd J_body_pseudo = J_body.transpose() * (J_body * J_body.transpose()).inverse();  // Right Pseudo Inverse
+        assert(J_body.cols() == 3);
+        Eigen::Matrix3d J_body_pos = J_body.block(3, 0, 3, 3);  // Position part only
+        // Eigen::MatrixXd J_body_pseudo = J_body.transpose() * (J_body * J_body.transpose()).inverse();  // Right Pseudo Inverse
         Eigen::Matrix4d T_body_desired = T_cur.inverse() * T_target;
         double theta;
         Eigen::Matrix4d S_skew = MatrixLog(T_body_desired, theta);
-        Eigen::VectorXd twist(6);  // V
+        Eigen::VectorXd twist(6);  // V, body twist
         twist << S_skew(2,1), S_skew(0,2), S_skew(1,0),  // omega components
                  S_skew(0,3), S_skew(1,3), S_skew(2,3);  // v components
         twist *= theta;  // S is normalized, multiply by theta to get twist
-        Eigen::VectorXd q_dot = J_body_pseudo * twist;
+        Eigen::VectorXd twist_v = twist.tail(3);
+        // Eigen::VectorXd q_dot = J_body_pseudo * twist;
+        Eigen::VectorXd q_dot = J_body_pos.inverse() * twist_v;
 
-        Eigen::VectorXd q_new = q_cur + q_dot * PGain; // TODO: *theta? Time step length?
+        q_cur = q_cur + q_dot * PGain; // TODO: *theta? Time step length?
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
-        q_cur = q_new;
         // Add unpacked configuration at update freq
         if (step != 0 && step % (calcFreq / updateFreq) == 0) {
             framesTendonLengthChange.push_back(curTendonLengthChange);

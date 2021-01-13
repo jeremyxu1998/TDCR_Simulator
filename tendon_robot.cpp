@@ -387,9 +387,9 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
     Eigen::VectorXd q;
     if (tendonLengthChange.rows() == m_numTendon) {
         q = tendonLengthChange;
-        if (fabs(q.sum()) > EPSILON) {  // check sum of delta = 0
-            return Eigen::Matrix4d::Identity();
-        }
+        // if (fabs(q.sum()) > EPSILON) {  // check sum of delta = 0, disabled here for Jacobian calculation
+        //     return Eigen::Matrix4d::Identity();
+        // }
     }
     else {
         return Eigen::Matrix4d::Identity();
