@@ -1,12 +1,12 @@
-function J = estimateJacobian(q, param, epsilon)
+function J = estimateJacobian(q, param, numSeg, epsilon)
 
 J = zeros(6, length(q));
 
-T_q = Forward(q, param);
+T_q = Forward(q, param, numSeg);
 for i = 1:length(q)
     qi = q;
     qi(i) = qi(i) + epsilon;
-    T_qi = Forward(qi, param);
+    T_qi = Forward(qi, param, numSeg);
     
     Ji_hom = invT(T_q)*(T_qi - T_q)/epsilon;
     vB = Ji_hom(1:3,4);

@@ -1,14 +1,26 @@
-function T = Forward(q, param)
-% Compute a forward pass for a single segment tendon robot
+function T = Forward(q, param, numSeg)
+% Compute a forward pass for a multiple segment tendon robot
 
 r = param(1);
-l_0 = param(2);
-q_1 = q(1);
-q_2 = q(2);
-d_l = q(3);
+L = param(2:end);
+Q = reshape(q, 3, []);
+
+T = eye(4);
+
+for i = 1:numSeg
+    T = T*forwardSection(Q(:,i), r, L(i));
+end
+
+end
+
+function T = forwardSection(qi, r, l_i)
+
+q_1 = qi(1);
+q_2 = qi(2);
+d_l = qi(3);
 
 q_3 = -(q_1 + q_2);
-l = l_0 + d_l;
+l = l_i + d_l;
 
 if q_1 ~= 0
     phi = atan2(0.5*q_1 + q_2, (-sqrt(3)/2)*q_1);
