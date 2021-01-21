@@ -92,7 +92,7 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
             diskActor->SetMapper(diskMapper);
             diskActor->GetProperty()->SetColor(0.8, 0.8, 0.8);
             if (diskCount == 0) {
-                diskActor->GetProperty()->SetColor(0.0, 0.0, 0.8);  // Test visualization purpose, TODO: remove
+                diskActor->GetProperty()->SetColor(0.0, 0.0, 0.8);
             }
             diskActors.push_back(diskActor);
         }

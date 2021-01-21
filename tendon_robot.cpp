@@ -297,10 +297,10 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
         return false;
     }
     double curExtLength = curSegLength - m_segLength;  // l_j
-    // check extension not exceeding maximum
-    if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
-        return false;
-    }
+    // // check extension not exceeding maximum
+    // if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
+    //     return false;
+    // }
     m_curExtLength = curExtLength;
 
 
@@ -394,10 +394,10 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
     else {
         return Eigen::Matrix4d::Identity();
     }
-    // check extension not exceeding maximum
-    if (curSegLength < m_segLength || curSegLength > m_segLength + m_maxExtLength) {
-        return Eigen::Matrix4d::Identity();
-    }
+    // // check extension not exceeding maximum
+    // if (curSegLength < m_segLength || curSegLength > m_segLength + m_maxExtLength) {
+    //     return Eigen::Matrix4d::Identity();
+    // }
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
