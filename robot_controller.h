@@ -23,6 +23,7 @@ private:
     // Eigen::MatrixXd & EstimateJacobian(const Eigen::VectorXd & q_cur);
     void UnpackRobotConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur,
                             Eigen::MatrixXd & curTendonLengthChange, Eigen::VectorXd & curSegLength);  // Unpack q to segment parameter matrices
+    void RoundValues(Eigen::VectorXd & vals, double precision);
 };
 
 #endif // ROBOT_CONTROLLER_H

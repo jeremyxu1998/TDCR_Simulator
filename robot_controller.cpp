@@ -59,7 +59,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
             }
             Eigen::Matrix4d T_cur_i = robot.CalcTipPose(curTendonLengthChange_i, curSegLength_i);
 
-            Eigen::Matrix4d J_bi_skew = T_cur.inverse() * (T_cur_i - T_cur) / qEpsilon;  // TODO: compare log()
+            Eigen::Matrix4d J_bi_skew = T_cur.inverse() * (T_cur_i - T_cur) / qEpsilon;  // Better to use matrix log, but precise enough here
             Eigen::VectorXd J_bi(6);
             J_bi << J_bi_skew(2,1), J_bi_skew(0,2), J_bi_skew(1,0),  // omega components
                     J_bi_skew(0,3), J_bi_skew(1,3), J_bi_skew(2,3);  // v components
@@ -70,14 +70,32 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
         // assert(J_body.cols() == 3);
         // Eigen::MatrixXd J_body_pos = J_body.block(3, 0, 3, 3);  // Position part only
         // Eigen::MatrixXd J_body_inv = J_body_pos.inverse();
-        /* 6dof robot, 6dof pose */
-        // Eigen::MatrixXd J_body_inv = J_body.inverse();
-        // Eigen::MatrixXd J_body_inv = J_body.colPivHouseholderQr().solve(Eigen::Matrix<double, 6, 6>::Identity());
+
+        /* 6dof robot, 6dof pose, using Damped Least Squares Method */
+        // Note: Not calculating inverse directly, because Jacobian is in singularity for z-axis rotation at initial pose
+        // Citation for damping factor calculation method:
+        // Y. Nakamura and H. Hanafusa, Inverse kinematics solutions with singularity robustness for robot manipulator control
+        Eigen::MatrixXd JJT = J_body * J_body.transpose();
+        // Note: use SVD to calculate determinant because determinant() is not working properly near singularity
+        // double JJT_det = JJT.determinant();
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(JJT);
+        Eigen::VectorXd JJT_singVals = svd.singularValues();
+        RoundValues(JJT_singVals, 1e-6);  // Round the values to 1e-6 to prevent the case of very_large_double * very_small_double
+        double JJT_det = JJT_singVals.prod();
+        double manipul = sqrt(JJT_det);  // Manipulability measure
+        double manipul_th = 0.01;  // Manipulability threshold
+        double lambda = 0.0;  // Damping factor
+        double lambda_zero = 1000; // Maximum damping factor
+        if (manipul < manipul_th)
+            lambda = lambda_zero * pow((1 - manipul / manipul_th), 2);
+        Eigen::MatrixXd J_body_pseudo = J_body.transpose() * 
+                (JJT + lambda * Eigen::Matrix<double,6,6>::Identity()).inverse();  // Right Pseudo Inverse
+        
         /* 6dof robot, 5dof pose, skip z-axis rotation */
-        Eigen::MatrixXd J_body_5dof(5, 6);
-        J_body_5dof.block(0, 0, 2, 6) = J_body.block(0, 0, 2, 6);
-        J_body_5dof.block(2, 0, 3, 6) = J_body.block(3, 0, 3, 6);
-        Eigen::MatrixXd J_body_pseudo = J_body_5dof.transpose() * (J_body_5dof * J_body_5dof.transpose()).inverse();  // Right Pseudo Inverse
+        // Eigen::MatrixXd J_body_5dof(5, 6);
+        // J_body_5dof.block(0, 0, 2, 6) = J_body.block(0, 0, 2, 6);
+        // J_body_5dof.block(2, 0, 3, 6) = J_body.block(3, 0, 3, 6);
+        // Eigen::MatrixXd J_body_pseudo = J_body_5dof.transpose() * (J_body_5dof * J_body_5dof.transpose()).inverse();  // Right Pseudo Inverse
         /* redundant 12dof (or 9dof) robot */
         // Eigen::MatrixXd J_body_pseudo = J_body.transpose() * (J_body * J_body.transpose()).inverse();  // Right Pseudo Inverse
         
@@ -92,13 +110,15 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
         /* single segment */
         // Eigen::VectorXd twist_v = twist.tail(3);
         // Eigen::VectorXd q_dot = J_body_inv * twist_v;
+
         /* 6dof robot, 6dof pose */
-        // Eigen::VectorXd q_dot = J_body_inv * twist;
+        Eigen::VectorXd q_dot = J_body_pseudo * twist;
+
         /* 6dof robot, 5dof pose, skip z-axis rotation */
-        Eigen::VectorXd twist_5dof(5);
-        twist_5dof.head(2) = twist.head(2);
-        twist_5dof.tail(3) = twist.tail(3);
-        Eigen::VectorXd q_dot = J_body_pseudo * twist_5dof;
+        // Eigen::VectorXd twist_5dof(5);
+        // twist_5dof.head(2) = twist.head(2);
+        // twist_5dof.tail(3) = twist.tail(3);
+        // Eigen::VectorXd q_dot = J_body_pseudo * twist_5dof;
         /* redundant 12dof (or 9dof) robot */
         // Eigen::VectorXd q_dot = J_body_pseudo * twist;
 
@@ -164,5 +184,16 @@ void BaseController::UnpackRobotConfig(TendonRobot & robot, int numTendon, const
         curTendonLengthChange(j, numTendon - 1) = (-tendonDelta);
         curSegLength(j) = (q_cur(qCount) + robot.getSegments()[j].getMinSegLength());
         qCount++;
+    }
+}
+
+void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)
+{
+    double multiplier = 1.0 / precision;
+    // Eigen::VectorXi valsScaled = (vals * multiplier).array().round();
+    // vals = valsScaled.cast<double>() * precision;
+    for (int i = 0; i < vals.size(); i++) {  // TODO: method without using loop
+        long valScaled = static_cast<long>(vals[i] * multiplier);
+        vals[i] = static_cast<double>(valScaled) * precision;
     }
 }
