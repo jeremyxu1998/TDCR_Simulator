@@ -50,12 +50,15 @@ MainWindow::MainWindow(QWidget *parent)
     }
     visualizer->UpdateVisualization(allDisksPose);
     ui->mainSplitter->addWidget(visualizer->getWidget());
+
+    InitPosePlot();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
     delete visualizer;
+    DeletePosePlot();
 }
 
 bool MainWindow::ReadFromXMLFile(QString const& fileName)
@@ -267,8 +270,31 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     }
 }
 
+void MainWindow::on_posePlotCheckBox_stateChanged(int checked)
+{
+    if (checked == Qt::Checked) {
+        posePlot.show();
+    }
+    else if (checked == Qt::Unchecked) {
+        posePlot.hide();
+    }
+}
+
 void MainWindow::on_calculateButton_clicked()
 {
+    Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
+    visualizer->UpdateTargetTipPose(targetTipPose);
+
+    tData.clear();
+    xData.clear();
+    yData.clear();
+    zData.clear();
+    Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
+    tData.append(0);
+    xData.append(initialTipPose(0, 3));
+    yData.append(initialTipPose(1, 3));
+    zData.append(initialTipPose(2, 3));
+
     std::vector<Eigen::MatrixXd> tendonLengthFrame;  // Config info returned from controller, for one robot
     std::vector<Eigen::VectorXd> segLengthFrame;
     // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots
@@ -283,10 +309,22 @@ void MainWindow::on_calculateButton_clicked()
         robots[0].SetTendonLength(tendonLengthFrame[frame_count], segLengthFrame[frame_count]);
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());
         // }
+        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();
+        tData.append((frame_count + 1) * 0.01);
+        xData.append(curTipPose(0, 3));
+        yData.append(curTipPose(1, 3));
+        zData.append(curTipPose(2, 3));
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    xPlot->setData(tData, xData);
+    xPlot->rescaleAxes();
+    yPlot->setData(tData, yData);
+    yPlot->rescaleAxes();
+    zPlot->setData(tData, zData);
+    zPlot->rescaleAxes();
+    posePlot.replot();
 
     tendonLengthChangeOld = tendonLengthChangeUI;
     segLengthOld = segLengthUI;
@@ -308,4 +346,37 @@ void MainWindow::on_calculateButton_clicked()
     // }
 
     return;
+}
+
+void MainWindow::InitPosePlot()
+{
+    posePlot.resize(500, 600);
+    posePlot.plotLayout()->clear();  // Clear default axis rect and start from scratch
+    xPlotAxes = new QCPAxisRect(&posePlot);
+    yPlotAxes = new QCPAxisRect(&posePlot);
+    zPlotAxes = new QCPAxisRect(&posePlot);
+    posePlot.plotLayout()->addElement(0, 0, xPlotAxes);
+    posePlot.plotLayout()->addElement(1, 0, yPlotAxes);
+    posePlot.plotLayout()->addElement(2, 0, zPlotAxes);
+    xPlot = posePlot.addGraph(xPlotAxes->axis(QCPAxis::atBottom), xPlotAxes->axis(QCPAxis::atLeft));
+    xPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
+    xPlotAxes->axis(QCPAxis::atLeft)->setLabel("x");
+    yPlot = posePlot.addGraph(yPlotAxes->axis(QCPAxis::atBottom), yPlotAxes->axis(QCPAxis::atLeft));
+    yPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
+    yPlotAxes->axis(QCPAxis::atLeft)->setLabel("y");
+    zPlot = posePlot.addGraph(zPlotAxes->axis(QCPAxis::atBottom), zPlotAxes->axis(QCPAxis::atLeft));
+    zPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
+    zPlotAxes->axis(QCPAxis::atLeft)->setLabel("z");
+}
+
+void MainWindow::DeletePosePlot()
+{
+    delete xPlotAxes;
+    delete yPlotAxes;
+    delete zPlotAxes;
+}
+
+void MainWindow::UpdatePosePlot()
+{
+
 }

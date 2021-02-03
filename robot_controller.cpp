@@ -132,7 +132,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
         }
 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
-        if ((p_target - p_cur).norm() < 1e-4) {  // TODO: verify orientation
+        if ((p_target - p_cur).norm() < 5e-4) {  // TODO: verify orientation
             planSucceed = true;
             framesTendonLengthChange.push_back(curTendonLengthChange);
             framesSegLength.push_back(curSegLength);
