@@ -24,8 +24,8 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
     originAxes = vtkSmartPointer<vtkAxesActor>::New();
     originAxes->SetTotalLength(0.01, 0.01, 0.01);
     originAxes->SetShaftTypeToCylinder();
-    originAxes->SetCylinderRadius(0.08);
-    originAxes->SetConeRadius(0.4);
+    originAxes->SetCylinderRadius(0.06);
+    originAxes->SetConeRadius(0.5);
     originAxes->AxisLabelsOff();
 
     renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -163,7 +163,7 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
     targetAxes = vtkSmartPointer<vtkAxesActor>::New();
     setAxesStyle(baseAxes, 0.02, 0.03, 0.3);
     setAxesStyle(tipAxes, 0.02, 0.03, 0.3);
-    setAxesStyle(targetAxes, 0.01, 0.08, 0.4);
+    setAxesStyle(targetAxes, 0.01, 0.06, 0.5);
 }
 
 void VtkVisualizer::TACRVisual::setAxesStyle(vtkSmartPointer<vtkAxesActor> axes, double axisLength, double cylinderRadius, double coneRadius)

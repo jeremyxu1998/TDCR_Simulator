@@ -6,7 +6,7 @@
 #include <QDomElement>
 #include <Eigen/Dense>
 
-#define EPSILON 1e-7
+#define EPSILON 1e-9
 
 class TendonRobot
 {

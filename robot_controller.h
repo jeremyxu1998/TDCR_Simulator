@@ -17,6 +17,8 @@ private:
     int calcFreq, updateFreq;
     double qEpsilon;  // small change in q when estimating Jacobian
     int maxTimestep;
+    double lambda_zero; // Maximum damping factor
+    double manipul_th;  // Manipulability threshold
     double PGain;  // Proportional gain
 
     Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);
