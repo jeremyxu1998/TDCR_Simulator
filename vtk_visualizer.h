@@ -33,6 +33,7 @@ public:
 
     QVTKOpenGLNativeWidget* getWidget();
     bool UpdateVisualization(const std::vector<std::vector<Eigen::Matrix4d>> & allDisksPose);
+    bool UpdateTargetTipPose(const Eigen::Matrix4d & pose);
 
 private:
     QVTKOpenGLNativeWidget* widget;
@@ -59,15 +60,16 @@ private:
         std::vector<std::vector< vtkSmartPointer<vtkPolyDataMapper> >> tendonMappers;
         std::vector<std::vector< vtkSmartPointer<vtkActor> >> tendonActors;
 
-        vtkSmartPointer<vtkAxesActor> baseAxes, tipAxes;
+        vtkSmartPointer<vtkAxesActor> baseAxes, tipAxes, targetAxes;
 
         // Helper data stuctures to store robot property details
         std::vector<unsigned> segDiskNum;  // size: seg_num
         std::vector<unsigned> segTendonNum;
         std::vector<double> segPitchRad;
 
-        void setAxesStyle(vtkSmartPointer<vtkAxesActor> axes);
+        void setAxesStyle(vtkSmartPointer<vtkAxesActor> axes, double axisLength, double cylinderRadius, double coneRadius);
         bool UpdateRobotVisualization(const std::vector<Eigen::Matrix4d> & robotDisksPose);
+        bool UpdateTargetPose(const Eigen::Matrix4d & pose);
         bool SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose);
         bool SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, const Eigen::Matrix4d & pose);
     };

@@ -7,6 +7,7 @@
 #include "tendon_robot.h"
 #include "robot_controller.h"
 #include "vtk_visualizer.h"
+#include "qcustomplot.h"
 
 #include <QSplitter>
 #include <QButtonGroup>
@@ -28,12 +29,19 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event);
 
 private slots:
+    void on_posePlotCheckBox_stateChanged(int checked);
     void on_calculateButton_clicked();
 
 private:
     Ui::MainWindow *ui;
     QButtonGroup robotSelectBtnGroup;
     int selectedRobotId;
+
+    // Tip pose plotting
+    QCustomPlot posePlot;
+    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes;
+    QCPGraph *xPlot, *yPlot, *zPlot;
+    QVector<double> tData, xData, yData, zData;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
@@ -42,12 +50,17 @@ private:
     std::vector<Eigen::MatrixXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
 
-    RobotController controller;
+    BaseController controller;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);
     void InitializeRobotConfig(TendonRobot & robot, int robotId);
     void UpdateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
     void SwitchRobotInput();  // When clicking radio button, reset input GUI to stored value of that robot
+
+    // Tip pose plotting
+    void InitPosePlot();
+    void DeletePosePlot();
+    void UpdatePosePlot();
 };
 #endif // MAINWINDOW_H

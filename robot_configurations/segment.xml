@@ -1,0 +1,15 @@
+<TACREnvironemnt>
+    <TendonRobot NumberOfSegments="1" Name="TestSegment">
+        <Segment Number="1" Type="ConstantCurvatureSegment">
+            <BackboneLength>50</BackboneLength>
+            <ExtendLength>20</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>8</NumDisk>
+            <PitchRadius>2.5</PitchRadius>
+            <DiskRadius>2.7</DiskRadius>
+            <DiskThickness>0.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+    </TendonRobot>
+</TACREnvironemnt>

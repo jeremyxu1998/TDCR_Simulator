@@ -168,6 +168,21 @@ bool TendonRobot::SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChang
     return true;
 }
 
+Eigen::Matrix4d TendonRobot::CalcTipPose(const Eigen::MatrixXd &robotTendonLengthChange, const Eigen::VectorXd &robotSegLength)
+{
+    // Input size check
+    if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {
+        return Eigen::Matrix4d::Identity();
+    }
+
+    Eigen::Matrix4d tipPose = Eigen::Matrix4d::Identity();
+    for (int j = 0; j < m_numSegment; j++) {
+        Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
+        tipPose *= m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]);
+    }
+    return tipPose;
+}
+
 int TendonRobot::getNumSegment()
 {
     return m_numSegment;
@@ -217,11 +232,6 @@ double TendonRobot::ConstCurvSegment::getMaxExtSegLength()
     return m_maxExtLength;
 }
 
-double TendonRobot::ConstCurvSegment::getCurSegLength()
-{
-    return (m_segLength + m_curExtLength);
-}
-
 double TendonRobot::ConstCurvSegment::getPitchRadius()
 {
     return m_pitchRadius;
@@ -240,6 +250,26 @@ double TendonRobot::ConstCurvSegment::getDiskThickness()
 double TendonRobot::ConstCurvSegment::getPhi()
 {
     return m_twistAngle;
+}
+
+double TendonRobot::ConstCurvSegment::getCurTendonLengthChange(int tendCount)
+{
+    if (tendCount < m_numTendon) {
+        return m_tendonLengthChange[tendCount];
+    }
+    else {
+        return 0;  // TODO: out of range handle
+    }
+}
+
+double TendonRobot::ConstCurvSegment::getCurExtLength()
+{
+    return m_curExtLength;
+}
+
+double TendonRobot::ConstCurvSegment::getCurSegLength()
+{
+    return (m_segLength + m_curExtLength);
 }
 
 Eigen::Matrix4d & TendonRobot::ConstCurvSegment::getSegTipPose()
@@ -267,10 +297,10 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
         return false;
     }
     double curExtLength = curSegLength - m_segLength;  // l_j
-    // check extension not exceeding maximum
-    if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
-        return false;
-    }
+    // // check extension not exceeding maximum
+    // if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
+    //     return false;
+    // }
     m_curExtLength = curExtLength;
 
 
@@ -350,4 +380,67 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
     m_segTipPose = m_diskPose[m_numDisk-1];
 
     return true;
+}
+
+Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eigen::VectorXd &tendonLengthChange, const double curSegLength)
+{
+    Eigen::VectorXd q;
+    if (tendonLengthChange.rows() == m_numTendon) {
+        q = tendonLengthChange;
+        // if (fabs(q.sum()) > EPSILON) {  // check sum of delta = 0, disabled here for Jacobian calculation
+        //     return Eigen::Matrix4d::Identity();
+        // }
+    }
+    else {
+        return Eigen::Matrix4d::Identity();
+    }
+    // // check extension not exceeding maximum
+    // if (curSegLength < m_segLength || curSegLength > m_segLength + m_maxExtLength) {
+    //     return Eigen::Matrix4d::Identity();
+    // }
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    Eigen::Matrix4d segTipPose = Eigen::Matrix4d::Identity();
+    if (zeroInputCase) {
+        segTipPose(2,3) = curSegLength;
+    }
+    else {
+        /* Robot dependent mapping: tendon length --> k,phi,l */
+        double beta = 2 * M_PI / m_numTendon;
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        double phi = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;  // Twist angle
+        double curvature = -(q(nonZeroId)) / (curSegLength * m_pitchRadius * cos(phi + nonZeroId * beta));
+
+        /* Robot independent mapping: k,phi,l --> T */
+        double phiCcw = -phi;  // Twist angle is defined CW, however tendon sequence (and coordinate) is CCW
+        Eigen::Matrix4d rotPhiTrans;
+        rotPhiTrans << cos(phiCcw), -sin(phiCcw), 0, 0,
+                       sin(phiCcw), cos(phiCcw), 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1;
+        Eigen::Matrix4d bendTrans;
+        double theta = curvature * curSegLength;
+        bendTrans << cos(theta), 0, sin(theta), (1/curvature) * (1 - cos(theta)),
+                     0, 1, 0, 0,
+                     -sin(theta), 0, cos(theta), (1/curvature) * sin(theta),
+                     0, 0, 0, 1;
+        Eigen::Matrix4d rotBackPhiTrans;
+        rotBackPhiTrans << cos(-phiCcw), -sin(-phiCcw), 0, 0,
+                           sin(-phiCcw), cos(-phiCcw), 0, 0,
+                           0, 0, 1, 0,
+                           0, 0, 0, 1;
+
+        segTipPose = rotPhiTrans * bendTrans * rotBackPhiTrans;
+    }
+
+    return segTipPose;
 }
