@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "./robot_configurations/", tr("XML files (*.xml)"));
+    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../robot_configurations/", tr("XML files (*.xml)"));
     if (xmlDir.isEmpty()) {
         QMessageBox::critical(this, "Error", "Robot config file load failed: Invalid input directory. Please restart program.");
         return;

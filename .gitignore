@@ -1,12 +1,5 @@
 *.pro.user
-ui_*.h
-*.moc
-moc_*.cpp
-moc_*.h
-
-Makefile*
+/build
 /.qmake.stash
-*.o
-tendon_robot_simulator
 
 .vscode

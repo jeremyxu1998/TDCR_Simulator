@@ -306,7 +306,7 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
-    for (int i = 0; i < m_numTendon; i++) {
+    for (int i = 0; i < m_numTendon - 1; i++) {  // An inelegant way to avoid >Ɛ changes on last tendon
         if (fabs(q(i)) > EPSILON) {
             zeroInputCase = false;
             nonZeroId = i;  // The first non-zero input tendon
@@ -401,7 +401,7 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
-    for (int i = 0; i < m_numTendon; i++) {
+    for (int i = 0; i < m_numTendon - 1; i++) {
         if (fabs(q(i)) > EPSILON) {
             zeroInputCase = false;
             nonZeroId = i;  // The first non-zero input tendon
