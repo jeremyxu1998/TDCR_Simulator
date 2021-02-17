@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->robot_1_Radio->setChecked(true);
     selectedRobotId = 0;
 
-    controller = BaseController();
+    controller = new BaseController(100);
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robots);
@@ -57,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete controller;
     delete visualizer;
     DeletePosePlot();
 }
@@ -299,7 +300,7 @@ void MainWindow::on_calculateButton_clicked()
     std::vector<Eigen::VectorXd> segLengthFrame;
     // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots
     assert(tendonLengthChangeUI[0].rows() == segLengthUI[0].rows());
-    controller.PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);  // TODO: return status check
+    controller->PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);  // TODO: return status check
     // }
 
     int frame_num = tendonLengthFrame.size();
@@ -316,7 +317,7 @@ void MainWindow::on_calculateButton_clicked()
         zData.append(curTipPose(2, 3));
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Sleep length depending on update frequency
     }
     xPlot->setData(tData, xData);
     xPlot->rescaleAxes();

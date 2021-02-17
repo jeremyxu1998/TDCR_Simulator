@@ -1,14 +1,14 @@
 #include "robot_controller.h"
 
-BaseController::BaseController()
+BaseController::BaseController(int freq)
 {
-    calcFreq = 100;
-    updateFreq = 10;
+    calcFreq = 1000;
+    updateFreq = freq;
     qEpsilon = 1e-5;
-    maxTimestep = 1e4;
+    maxSteps = 1e4;
     lambda_zero = 1000;
     manipul_th = 0.01;
-    PGain = 5e-3;
+    PGain = 5;
 }
 
 BaseController::~BaseController()
@@ -46,7 +46,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
     assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
     assert(curSegLength.size() == targetSegLength.size());
 
-    for (int step = 0; step < maxTimestep; step++) {
+    for (int step = 0; step < maxSteps; step++) {
         // Estimate Jacobian
         for (int i = 0; i < numDOF; i++) {  // Note: "i" here is NOT tendon count, but DOF count
             Eigen::MatrixXd curTendonLengthChange_i = curTendonLengthChange;
@@ -98,7 +98,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
         twist *= theta;  // S is normalized, multiply by theta to get twist
 
         Eigen::VectorXd q_dot = J_body_pseudo * twist;
-        q_cur = q_cur + q_dot * PGain; // TODO: Time step length?
+        q_cur = q_cur + q_dot * PGain * (1.0 / static_cast<double>(calcFreq));
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
         // Add unpacked configuration at update freq

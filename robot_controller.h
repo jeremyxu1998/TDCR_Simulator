@@ -7,7 +7,7 @@
 class BaseController
 {
 public:
-    BaseController();
+    BaseController(int freq);
     ~BaseController();
 
     bool PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
@@ -16,7 +16,7 @@ public:
 private:
     int calcFreq, updateFreq;
     double qEpsilon;  // small change in q when estimating Jacobian
-    int maxTimestep;
+    int maxSteps;
     double lambda_zero; // Maximum damping factor
     double manipul_th;  // Manipulability threshold
     double PGain;  // Proportional gain
