@@ -1,0 +1,15 @@
+<TACREnvironemnt>
+    <TendonRobot NumberOfSegments="1" Name="Metabot">
+        <Segment Number="1" Type="ConstantCurvatureSegment">
+            <BackboneLength>30</BackboneLength>
+            <ExtendLength>25</ExtendLength>
+            <NumTendon>3</NumTendon>
+            <NumDisk>10</NumDisk>
+            <PitchRadius>2.5</PitchRadius>
+            <DiskRadius>3.5</DiskRadius>
+            <DiskThickness>1.5</DiskThickness>
+            <InitialCurvature>0.0</InitialCurvature>
+            <InitialRotAngle>0.0</InitialRotAngle>
+        </Segment>
+    </TendonRobot>
+</TACREnvironemnt>

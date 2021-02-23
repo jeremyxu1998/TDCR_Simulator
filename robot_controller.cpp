@@ -75,19 +75,56 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
          * Citation for damping factor calculation method:
          * Y. Nakamura and H. Hanafusa, Inverse kinematics solutions with singularity robustness for robot manipulator control
          */
-        Eigen::MatrixXd JJT = J_body * J_body.transpose();
-        // Note: use SVD to calculate determinant because determinant() is not working properly near singularity
-        Eigen::JacobiSVD<Eigen::MatrixXd> svd(JJT);
-        Eigen::VectorXd JJT_singVals = svd.singularValues();
-        RoundValues(JJT_singVals, 1e-6);  // Round the values to 1e-6 to prevent the case of very_large_double * very_small_double
-        double JJT_det = JJT_singVals.prod();
-        double manipul = sqrt(JJT_det);  // Manipulability measure
-        double lambda = 0.0;  // Damping factor
-        if (manipul < manipul_th)
-            lambda = lambda_zero * pow((1 - manipul / manipul_th), 2);
-        Eigen::Matrix<double,6,6> modDampingMat = Eigen::Matrix<double,6,6>::Zero();
-        modDampingMat(2, 2) = 1;  // Only damp the z-axis rotation
-        Eigen::MatrixXd J_body_pseudo = J_body.transpose() * (JJT + lambda * modDampingMat).inverse();  // Right Pseudo Inverse
+        // Eigen::MatrixXd JJT = J_body * J_body.transpose();
+        // // Note: use SVD to calculate determinant because determinant() is not working properly near singularity
+        // Eigen::JacobiSVD<Eigen::MatrixXd> svd(JJT);
+        // Eigen::VectorXd JJT_singVals = svd.singularValues();
+        // RoundValues(JJT_singVals, 1e-6);  // Round the values to 1e-6 to prevent the case of very_large_double * very_small_double
+        // double JJT_det = JJT_singVals.prod();
+        // double manipul = sqrt(JJT_det);  // Manipulability measure
+        // double lambda = 0.0;  // Damping factor
+        // if (manipul < manipul_th)
+        //     lambda = lambda_zero * pow((1 - manipul / manipul_th), 2);
+        // Eigen::Matrix<double,6,6> modDampingMat = Eigen::Matrix<double,6,6>::Zero();
+        // modDampingMat(2, 2) = 1;  // Only damp the z-axis rotation
+        // Eigen::MatrixXd J_body_pseudo = J_body.transpose() * (JJT + lambda * modDampingMat).inverse();  // Right Pseudo Inverse
+
+        Eigen::MatrixXd JTJ = J_body.transpose() * J_body;
+        double jointLimitWeight = 5;
+        Eigen::MatrixXd weightMat = jointLimitWeight * Eigen::MatrixXd::Identity(numDOF, numDOF);
+        double stepSize = 1e-7;
+        Eigen::VectorXd negGradCostJointLimit = Eigen::VectorXd::Zero(numDOF);  // v: cost function for joint limit task
+       double segMinLength = 1.5e-2;
+       for (int j = 0; j < robot.getNumSegment(); j++) {  // Segment length joint limit, analytical gradient
+           double segMaxLength = robot.getSegments()[j].getMinSegLength() + robot.getSegments()[j].getMaxExtSegLength();
+           double segCurLength = robot.getSegments()[j].getCurSegLength();
+           double gradCostSingleJointLimit = (segMaxLength - segMinLength) * (2 * segCurLength - segMaxLength - segMinLength) /
+                                               (pow(segMaxLength - segCurLength, 2) * pow(segCurLength - segMinLength, 2));
+           negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * gradCostSingleJointLimit;
+       }
+        for (int j = 0; j < robot.getNumSegment(); j++) {  // Segment curvature joint limit, numerical gradient
+            Eigen::VectorXd segCurTendonLengthChange = curTendonLengthChange.row(j);
+            double curCurvature = robot.getSegments()[j].CalcCurvature(segCurTendonLengthChange, curSegLength[j]);
+            double maxCurvature = robot.getSegments()[j].CalcMaxCurvature(curSegLength[j]);
+            double curCurvatureCost = maxCurvature / (maxCurvature - curCurvature);
+            // Calculate new costs WRT each DOF change
+            for (int i = 0; i < numTendon - 1; i++) {
+                // WRT tendon length change
+                Eigen::VectorXd segNumerTendonLengthChange = segCurTendonLengthChange;
+                segNumerTendonLengthChange(i) += qEpsilon;
+                double numerCurvature = robot.getSegments()[j].CalcCurvature(segNumerTendonLengthChange, curSegLength[j]);
+                double numerCurvatureCost = maxCurvature / (maxCurvature - numerCurvature);
+                double costDerivative = (numerCurvatureCost - curCurvatureCost) / qEpsilon;
+                negGradCostJointLimit(j * numTendon + i) -= stepSize * costDerivative;
+            }
+            // WRT segment length change
+            double numerSegLength = curSegLength[j] + qEpsilon;
+            double numerCurvature = robot.getSegments()[j].CalcCurvature(segCurTendonLengthChange, numerSegLength);
+            double numerMaxCurvature = robot.getSegments()[j].CalcMaxCurvature(numerSegLength);
+            double numerCurvatureCost = numerMaxCurvature / (numerMaxCurvature - numerCurvature);
+            double costDerivative = (numerCurvatureCost - curCurvatureCost) / qEpsilon;
+            negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * costDerivative;
+        }
         
         Eigen::Matrix4d T_body_desired = T_cur.inverse() * T_target;
         double theta;
@@ -97,7 +134,8 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
                  S_skew(0,3), S_skew(1,3), S_skew(2,3);  // v components
         twist *= theta;  // S is normalized, multiply by theta to get twist
 
-        Eigen::VectorXd q_dot = J_body_pseudo * twist;
+        Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCostJointLimit);
+        // Eigen::VectorXd q_dot = J_body_pseudo * twist;
         q_cur = q_cur + q_dot * PGain * (1.0 / static_cast<double>(calcFreq));
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
@@ -129,13 +167,13 @@ Eigen::Matrix4d BaseController::MatrixLog(const Eigen::Matrix4d & T, double & th
     Eigen::Vector3d p = T.topRightCorner(3,1);
     Eigen::Matrix3d omega_skew;  // [ω]
     Eigen::Vector3d v;
-    if (R.isApprox(Eigen::Matrix3d::Identity())) {
+    theta = acos((R.trace() - 1) / 2);
+    if (std::isnan(theta) || std::abs(theta) < EPSILON) {  // For pure translation case
         theta = p.norm();
         omega_skew = Eigen::Matrix3d::Identity();
         v = p.normalized();
     }
     else {
-        theta = acos((R.trace() - 1) / 2);
         omega_skew = (1 / (2 * sin(theta))) * (R - R.transpose());
         Eigen::Matrix3d G_inv = Eigen::Matrix3d::Identity() / theta - 0.5 * omega_skew
                             + (1 / theta - 0.5 * cos(theta / 2) / sin(theta / 2)) * (omega_skew * omega_skew);

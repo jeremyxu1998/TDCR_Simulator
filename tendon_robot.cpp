@@ -444,3 +444,42 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
 
     return segTipPose;
 }
+
+double TendonRobot::ConstCurvSegment::CalcCurvature(const Eigen::VectorXd & q, const double l)
+{
+    if (q.rows() != m_numTendon) {
+        return 0.0;
+    }
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon - 1; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    if (zeroInputCase) {
+        return 0.0;
+    }
+    else {
+        /* Robot dependent mapping: tendon length --> k,phi,l */
+        double beta = 2 * M_PI / m_numTendon;
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        double phi = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;
+        double curvature = -(q(nonZeroId)) / (l * m_pitchRadius * cos(phi + nonZeroId * beta));
+        return curvature;
+    }
+}
+
+double TendonRobot::ConstCurvSegment::CalcMaxCurvature(const double l)
+{
+    /* There are two cases, pick the smaller one as curvature limit:
+     * (1) Edge of spacer disks touching each other
+     * (2) Tip is bending 180 deg from base */
+    double maxCurvDisk = (l - m_numDisk * m_diskThickness) / (l * m_diskRadius);
+    double maxCurvTip = M_PI / l;  // curvature = 1/r for circle
+    return std::min(maxCurvDisk, maxCurvTip);
+}

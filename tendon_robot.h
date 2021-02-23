@@ -53,6 +53,8 @@ private:
         bool ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
         // Simple version of FK(), calculate and return tip pose only and does NOT update robot geometry
         Eigen::Matrix4d ForwardKinematicsSimple(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
+        double CalcCurvature(const Eigen::VectorXd & q, const double l);  // Robot dependent mapping only
+        double CalcMaxCurvature(const double l);  // Max curvature given current length l
     private:
         // Property
         double m_segLength;  // l_j = m_segLength + m_curExtLength

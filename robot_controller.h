@@ -15,7 +15,7 @@ public:
 
 private:
     int calcFreq, updateFreq;
-    double qEpsilon;  // small change in q when estimating Jacobian
+    double qEpsilon;  // small change in q when calculating numerical derivatives (Jacobian, curvature)
     int maxSteps;
     double lambda_zero; // Maximum damping factor
     double manipul_th;  // Manipulability threshold
