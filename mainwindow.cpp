@@ -300,7 +300,10 @@ void MainWindow::on_calculateButton_clicked()
     std::vector<Eigen::VectorXd> segLengthFrame;
     // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots
     assert(tendonLengthChangeUI[0].rows() == segLengthUI[0].rows());
-    controller->PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);  // TODO: return status check
+    bool planSucceed = controller->PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
+    if (!planSucceed) {
+        QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
+    }
     // }
 
     int frame_num = tendonLengthFrame.size();

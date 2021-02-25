@@ -17,8 +17,9 @@ private:
     int calcFreq, updateFreq;
     double qEpsilon;  // small change in q when calculating numerical derivatives (Jacobian, curvature)
     int maxSteps;
-    double lambda_zero; // Maximum damping factor
-    double manipul_th;  // Manipulability threshold
+    double jointLimitWeight;  // Damping for JTJ matrix inverse close to singularity
+    double stepSize;
+    double taskWeightSegLen, taskWeightCurv;  // Sub-task (joint limit) weight, specific to each robot config
     double PGain;  // Proportional gain
 
     Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);
