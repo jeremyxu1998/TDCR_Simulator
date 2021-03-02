@@ -111,7 +111,6 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
     tendonLengthChangeMod.push_back(Eigen::MatrixXi::Zero(segNum, tenNum));
     for (int seg = 0; seg < segNum; seg++) {
         auto curSeg = robot.getSegments()[seg];
-        // Init backbone length to be no extension
         double initSegLen = curSeg.getCurSegLength();
         segLengthUI[robotId](seg) = initSegLen;
         segLengthOld[robotId](seg) = initSegLen;

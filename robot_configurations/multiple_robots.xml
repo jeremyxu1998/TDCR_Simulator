@@ -9,8 +9,8 @@
             <Yaw>-60.0</Yaw>
         </Base>
         <Segment Number="1" Type="ConstantCurvatureSegment">
-            <BackboneLength>70</BackboneLength>
-            <ExtendLength>30</ExtendLength>
+            <InitialExtendLength>70</InitialExtendLength>
+            <MaxExtendLength>100</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>8</NumDisk>
             <PitchRadius>2.5</PitchRadius>
@@ -20,8 +20,8 @@
             <InitialRotAngle>0.0</InitialRotAngle>
         </Segment>
         <Segment Number="2" Type="ConstantCurvatureSegment">
-            <BackboneLength>50</BackboneLength>
-            <ExtendLength>20</ExtendLength>
+            <InitialExtendLength>50</InitialExtendLength>
+            <MaxExtendLength>70</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>6</NumDisk>
             <PitchRadius>2.0</PitchRadius>
@@ -42,8 +42,8 @@
             <Yaw>60.0</Yaw>
         </Base>
         <Segment Number="1" Type="ConstantCurvatureSegment">
-            <BackboneLength>70</BackboneLength>
-            <ExtendLength>30</ExtendLength>
+            <InitialExtendLength>70</InitialExtendLength>
+            <MaxExtendLength>100</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>8</NumDisk>
             <PitchRadius>2.5</PitchRadius>
@@ -53,8 +53,8 @@
             <InitialRotAngle>0.0</InitialRotAngle>
         </Segment>
         <Segment Number="2" Type="ConstantCurvatureSegment">
-            <BackboneLength>50</BackboneLength>
-            <ExtendLength>20</ExtendLength>
+            <InitialExtendLength>50</InitialExtendLength>
+            <MaxExtendLength>70</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>6</NumDisk>
             <PitchRadius>2.0</PitchRadius>
@@ -75,8 +75,8 @@
             <Yaw>180.0</Yaw>
         </Base>
         <Segment Number="1" Type="ConstantCurvatureSegment">
-            <BackboneLength>70</BackboneLength>
-            <ExtendLength>30</ExtendLength>
+            <InitialExtendLength>70</InitialExtendLength>
+            <MaxExtendLength>100</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>8</NumDisk>
             <PitchRadius>2.5</PitchRadius>
@@ -86,8 +86,8 @@
             <InitialRotAngle>0.0</InitialRotAngle>
         </Segment>
         <Segment Number="2" Type="ConstantCurvatureSegment">
-            <BackboneLength>50</BackboneLength>
-            <ExtendLength>20</ExtendLength>
+            <InitialExtendLength>50</InitialExtendLength>
+            <MaxExtendLength>70</MaxExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>6</NumDisk>
             <PitchRadius>2.0</PitchRadius>

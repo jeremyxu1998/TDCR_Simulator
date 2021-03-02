@@ -73,9 +73,9 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
         Eigen::MatrixXd JTJ = J_body.transpose() * J_body;
         Eigen::MatrixXd weightMat = jointLimitWeight * Eigen::MatrixXd::Identity(numDOF, numDOF);  // Damping for JTJ matrix inverse close to singularity
         Eigen::VectorXd negGradCostJointLimit = Eigen::VectorXd::Zero(numDOF);  // v: cost function for joint limit task
-        double segMinLength = 1.5e-2;  // TODO: robot class change
         // Segment length joint limit, analytical gradient
         for (int j = 0; j < robot.getNumSegment(); j++) {
+            double segMinLength = robot.getSegments()[j].getMinSegLength();
             double segMaxLength = robot.getSegments()[j].getMinSegLength() + robot.getSegments()[j].getMaxExtSegLength();
             double segCurLength = curSegLength[j];
             double gradCostSingleJointLimit = (segMaxLength - segMinLength) * (2 * segCurLength - segMaxLength - segMinLength) /
