@@ -290,14 +290,10 @@ void MainWindow::on_calculateButton_clicked()
     Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
     visualizer->UpdateTargetTipPose(targetTipPose);
 
-    tData.clear();
-    xData.clear();
-    yData.clear();
-    zData.clear();
-    tData.append(0);
-    xData.append(initialTipPose(0, 3));
-    yData.append(initialTipPose(1, 3));
-    zData.append(initialTipPose(2, 3));
+    xPlot->data()->clear();
+    yPlot->data()->clear();
+    zPlot->data()->clear();
+    UpdatePosePlot(0.0, initialTipPose);
 
     Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
     Eigen::VectorXd segLengthFrame;
@@ -312,12 +308,10 @@ void MainWindow::on_calculateButton_clicked()
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());
         // }
         Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
-        tData.append((frameCount + 1) * 0.01);
-        xData.append(curTipPose(0, 3));
-        yData.append(curTipPose(1, 3));
-        zData.append(curTipPose(2, 3));
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
+        double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
+        UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
 
         if (reachTarget)
             break;
@@ -326,14 +320,6 @@ void MainWindow::on_calculateButton_clicked()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
     }
-
-    xPlot->setData(tData, xData);
-    xPlot->rescaleAxes();
-    yPlot->setData(tData, yData);
-    yPlot->rescaleAxes();
-    zPlot->setData(tData, zData);
-    zPlot->rescaleAxes();
-    posePlot.replot();
 
     tendonLengthChangeOld = tendonLengthChangeUI;
     segLengthOld = segLengthUI;
@@ -385,7 +371,13 @@ void MainWindow::DeletePosePlot()
     delete zPlotAxes;
 }
 
-void MainWindow::UpdatePosePlot()
+void MainWindow::UpdatePosePlot(double t, Eigen::Matrix4d pose)
 {
-
+    xPlot->addData(t, pose(0, 3));
+    xPlot->rescaleAxes();
+    yPlot->addData(t, pose(1, 3));
+    yPlot->rescaleAxes();
+    zPlot->addData(t, pose(2, 3));
+    zPlot->rescaleAxes();
+    posePlot.replot();
 }

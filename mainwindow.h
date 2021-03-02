@@ -41,7 +41,6 @@ private:
     QCustomPlot posePlot;
     QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes;
     QCPGraph *xPlot, *yPlot, *zPlot;
-    QVector<double> tData, xData, yData, zData;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
@@ -63,6 +62,6 @@ private:
     // Tip pose plotting
     void InitPosePlot();
     void DeletePosePlot();
-    void UpdatePosePlot();
+    void UpdatePosePlot(double t, Eigen::Matrix4d pose);
 };
 #endif // MAINWINDOW_H
