@@ -5,20 +5,20 @@ BaseController::BaseController(int freq)
     calcFreq = 1000;
     updateFreq = freq;
     qEpsilon = 1e-5;
-    maxSteps = 1e4;
     jointLimitWeight = 10;
     stepSize = 1e-7;
     taskWeightSegLen = 0.05;
     taskWeightCurv = 0.5;
     PGain = 5;
+    posAccuReq = 5e-4;
 }
 
 BaseController::~BaseController()
 {
 }
 
-bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
-                                    std::vector<Eigen::MatrixXd> & framesTendonLengthChange, std::vector<Eigen::VectorXd> & framesSegLength)
+bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+                                    Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength)
 {
     Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
     Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
@@ -38,9 +38,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
     }
     int numDOF = q_cur.size();
 
-    framesTendonLengthChange.clear();
-    framesSegLength.clear();
-    bool planSucceed = false;
+    bool reachTarget = false;
     Eigen::MatrixXd J_body = Eigen::MatrixXd::Zero(6,numDOF);  // Body Jacobian
     Eigen::MatrixXd curTendonLengthChange(targetTendonLengthChange.rows(), targetTendonLengthChange.cols());
     Eigen::VectorXd curSegLength(targetSegLength.size());
@@ -48,6 +46,7 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
     assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
     assert(curSegLength.size() == targetSegLength.size());
 
+    int maxSteps = calcFreq / updateFreq;
     for (int step = 0; step < maxSteps; step++) {
         // Estimate Jacobian
         for (int i = 0; i < numDOF; i++) {  // Note: "i" here is NOT tendon count, but DOF count
@@ -121,21 +120,16 @@ bool BaseController::PathPlanning(TendonRobot & robot, const Eigen::MatrixXd & t
         q_cur = q_cur + q_dot * PGain * (1.0 / static_cast<double>(calcFreq));
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
-        // Add unpacked configuration at update freq
-        if (step != 0 && step % (calcFreq / updateFreq) == 0) {
-            framesTendonLengthChange.push_back(curTendonLengthChange);
-            framesSegLength.push_back(curSegLength);
-        }
 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
-        if ((p_target - p_cur).norm() < 5e-4) {  // TODO: verify orientation
-            planSucceed = true;
-            framesTendonLengthChange.push_back(curTendonLengthChange);
-            framesSegLength.push_back(curSegLength);
+        if ((p_target - p_cur).norm() < posAccuReq) {  // TODO: verify orientation
+            reachTarget = true;
             break;
         }
     }
-    return planSucceed;
+    framesTendonLengthChange = curTendonLengthChange;
+    framesSegLength = curSegLength;
+    return reachTarget;
 }
 
 /* Refer to Modern Robotics Textbook, chapter 3.3.3

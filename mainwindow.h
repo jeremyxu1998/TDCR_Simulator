@@ -51,6 +51,8 @@ private:
     std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
 
     BaseController* controller;
+    int maxFrameNum;  // Maximum number of frame updates per path planning calculation
+    int frameFreq;  // Frame update frequency;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);

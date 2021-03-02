@@ -40,7 +40,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->robot_1_Radio->setChecked(true);
     selectedRobotId = 0;
 
-    controller = new BaseController(100);
+    // Controller initialization
+    maxFrameNum = 1000;
+    frameFreq = 100;
+    controller = new BaseController(frameFreq);
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robots);
@@ -283,6 +286,7 @@ void MainWindow::on_posePlotCheckBox_stateChanged(int checked)
 
 void MainWindow::on_calculateButton_clicked()
 {
+    Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
     Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
     visualizer->UpdateTargetTipPose(targetTipPose);
 
@@ -290,38 +294,39 @@ void MainWindow::on_calculateButton_clicked()
     xData.clear();
     yData.clear();
     zData.clear();
-    Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
     tData.append(0);
     xData.append(initialTipPose(0, 3));
     yData.append(initialTipPose(1, 3));
     zData.append(initialTipPose(2, 3));
 
-    std::vector<Eigen::MatrixXd> tendonLengthFrame;  // Config info returned from controller, for one robot
-    std::vector<Eigen::VectorXd> segLengthFrame;
-    // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots
-    assert(tendonLengthChangeUI[0].rows() == segLengthUI[0].rows());
-    bool planSucceed = controller->PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
-    if (!planSucceed) {
-        QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
-    }
-    // }
+    Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
+    Eigen::VectorXd segLengthFrame;
+    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
 
-    int frame_num = tendonLengthFrame.size();
-    for (int frame_count = 0; frame_count < frame_num; frame_count++) {
-        std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;
-        // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {
-        robots[0].SetTendonLength(tendonLengthFrame[frame_count], segLengthFrame[frame_count]);
+    for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
+        // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
+        // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
+        bool reachTarget = controller->PathPlanningUpdate(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
+        allDisksPose.clear();
+        robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());
         // }
-        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();
-        tData.append((frame_count + 1) * 0.01);
+        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+        tData.append((frameCount + 1) * 0.01);
         xData.append(curTipPose(0, 3));
         yData.append(curTipPose(1, 3));
         zData.append(curTipPose(2, 3));
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));  // Sleep length depending on update frequency
+
+        if (reachTarget)
+            break;
+        else if (frameCount == maxFrameNum - 1)
+            QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
     }
+
     xPlot->setData(tData, xData);
     xPlot->rescaleAxes();
     yPlot->setData(tData, yData);
