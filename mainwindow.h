@@ -7,7 +7,7 @@
 #include "tendon_robot.h"
 #include "robot_controller.h"
 #include "vtk_visualizer.h"
-#include "qcustomplot.h"
+#include "lib/qcustomplot.h"
 
 #include <QSplitter>
 #include <QButtonGroup>
