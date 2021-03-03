@@ -104,8 +104,8 @@ bool TendonRobot::SetFromDomElement(QDomElement const& elem)
 
         // TODO: Segment type check
 
-        ConstCurvSegment segment(curNode.firstChildElement("BackboneLength").text().toDouble(),
-                                 curNode.firstChildElement("ExtendLength").text().toDouble(),
+        ConstCurvSegment segment(curNode.firstChildElement("InitialExtendLength").text().toDouble(),
+                                 curNode.firstChildElement("MaxExtendLength").text().toDouble(),
                                  curNode.firstChildElement("NumTendon").text().toInt(),
                                  curNode.firstChildElement("NumDisk").text().toInt(),
                                  curNode.firstChildElement("PitchRadius").text().toDouble(),
@@ -194,14 +194,14 @@ std::vector<TendonRobot::ConstCurvSegment> & TendonRobot::getSegments()
 }
 
 TendonRobot::ConstCurvSegment::ConstCurvSegment(
-                                double segLength,
+                                double initExtLength,
                                 double maxExtLength,
                                 int numTendon,
                                 int numDisk,
                                 double pitchRadius,
                                 double diskRadius,
                                 double diskThickness)
-                            : m_segLength(segLength / 1000.0),
+                            : m_curExtLength(initExtLength / 1000.0),
                               m_maxExtLength(maxExtLength / 1000.0),
                               m_numTendon(numTendon),
                               m_numDisk(numDisk),
@@ -209,7 +209,7 @@ TendonRobot::ConstCurvSegment::ConstCurvSegment(
                               m_diskRadius(diskRadius / 1000.0),
                               m_diskThickness(diskThickness / 1000.0)
 {
-    m_curExtLength = 0.0;
+    m_minSegLength = m_numDisk * m_diskThickness;
 }
 
 int TendonRobot::ConstCurvSegment::getDiskNum()
@@ -224,7 +224,7 @@ int TendonRobot::ConstCurvSegment::getTendonNum()
 
 double TendonRobot::ConstCurvSegment::getMinSegLength()
 {
-    return m_segLength;
+    return m_minSegLength;
 }
 
 double TendonRobot::ConstCurvSegment::getMaxExtSegLength()
@@ -269,7 +269,7 @@ double TendonRobot::ConstCurvSegment::getCurExtLength()
 
 double TendonRobot::ConstCurvSegment::getCurSegLength()
 {
-    return (m_segLength + m_curExtLength);
+    return (m_minSegLength + m_curExtLength);
 }
 
 Eigen::Matrix4d & TendonRobot::ConstCurvSegment::getSegTipPose()
@@ -296,17 +296,17 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
     else {
         return false;
     }
-    double curExtLength = curSegLength - m_segLength;  // l_j
-    // // check extension not exceeding maximum
-    // if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
-    //     return false;
-    // }
+    double curExtLength = curSegLength - m_minSegLength;  // l_j
+    // check extension not exceeding maximum
+    if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
+        return false;
+    }
     m_curExtLength = curExtLength;
 
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
-    for (int i = 0; i < m_numTendon; i++) {
+    for (int i = 0; i < m_numTendon - 1; i++) {  // An inelegant way to avoid >Ɛ changes on last tendon
         if (fabs(q(i)) > EPSILON) {
             zeroInputCase = false;
             nonZeroId = i;  // The first non-zero input tendon
@@ -387,21 +387,14 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
     Eigen::VectorXd q;
     if (tendonLengthChange.rows() == m_numTendon) {
         q = tendonLengthChange;
-        // if (fabs(q.sum()) > EPSILON) {  // check sum of delta = 0, disabled here for Jacobian calculation
-        //     return Eigen::Matrix4d::Identity();
-        // }
     }
     else {
         return Eigen::Matrix4d::Identity();
     }
-    // // check extension not exceeding maximum
-    // if (curSegLength < m_segLength || curSegLength > m_segLength + m_maxExtLength) {
-    //     return Eigen::Matrix4d::Identity();
-    // }
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
-    for (int i = 0; i < m_numTendon; i++) {
+    for (int i = 0; i < m_numTendon - 1; i++) {
         if (fabs(q(i)) > EPSILON) {
             zeroInputCase = false;
             nonZeroId = i;  // The first non-zero input tendon
@@ -443,4 +436,43 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
     }
 
     return segTipPose;
+}
+
+double TendonRobot::ConstCurvSegment::CalcCurvature(const Eigen::VectorXd & q, const double l)
+{
+    if (q.rows() != m_numTendon) {
+        return 0.0;
+    }
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon - 1; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    if (zeroInputCase) {
+        return 0.0;
+    }
+    else {
+        /* Robot dependent mapping: tendon length --> k,phi,l */
+        double beta = 2 * M_PI / m_numTendon;
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        double phi = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;
+        double curvature = -(q(nonZeroId)) / (l * m_pitchRadius * cos(phi + nonZeroId * beta));
+        return curvature;
+    }
+}
+
+double TendonRobot::ConstCurvSegment::CalcMaxCurvature(const double l)
+{
+    /* There are two cases, pick the smaller one as curvature limit:
+     * (1) Edge of spacer disks touching each other
+     * (2) Tip is bending 180 deg from base */
+    double maxCurvDisk = (l - m_numDisk * m_diskThickness) / (l * m_diskRadius);
+    double maxCurvTip = M_PI / l;  // curvature = 1/r for circle
+    return std::min(maxCurvDisk, maxCurvTip);
 }

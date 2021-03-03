@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "./robot_configurations/", tr("XML files (*.xml)"));
+    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../robot_configurations/", tr("XML files (*.xml)"));
     if (xmlDir.isEmpty()) {
         QMessageBox::critical(this, "Error", "Robot config file load failed: Invalid input directory. Please restart program.");
         return;
@@ -40,7 +40,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->robot_1_Radio->setChecked(true);
     selectedRobotId = 0;
 
-    controller = BaseController();
+    // Controller initialization
+    maxFrameNum = 1000;
+    frameFreq = 100;
+    controller = new BaseController(frameFreq);
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robots);
@@ -57,6 +60,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete controller;
     delete visualizer;
     DeletePosePlot();
 }
@@ -107,7 +111,6 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
     tendonLengthChangeMod.push_back(Eigen::MatrixXi::Zero(segNum, tenNum));
     for (int seg = 0; seg < segNum; seg++) {
         auto curSeg = robot.getSegments()[seg];
-        // Init backbone length to be no extension
         double initSegLen = curSeg.getCurSegLength();
         segLengthUI[robotId](seg) = initSegLen;
         segLengthOld[robotId](seg) = initSegLen;
@@ -282,49 +285,40 @@ void MainWindow::on_posePlotCheckBox_stateChanged(int checked)
 
 void MainWindow::on_calculateButton_clicked()
 {
+    Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
     Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
     visualizer->UpdateTargetTipPose(targetTipPose);
 
-    tData.clear();
-    xData.clear();
-    yData.clear();
-    zData.clear();
-    Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
-    tData.append(0);
-    xData.append(initialTipPose(0, 3));
-    yData.append(initialTipPose(1, 3));
-    zData.append(initialTipPose(2, 3));
+    xPlot->data()->clear();
+    yPlot->data()->clear();
+    zPlot->data()->clear();
+    UpdatePosePlot(0.0, initialTipPose);
 
-    std::vector<Eigen::MatrixXd> tendonLengthFrame;  // Config info returned from controller, for one robot
-    std::vector<Eigen::VectorXd> segLengthFrame;
-    // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots
-    assert(tendonLengthChangeUI[0].rows() == segLengthUI[0].rows());
-    controller.PathPlanning(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);  // TODO: return status check
-    // }
+    Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
+    Eigen::VectorXd segLengthFrame;
+    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
 
-    int frame_num = tendonLengthFrame.size();
-    for (int frame_count = 0; frame_count < frame_num; frame_count++) {
-        std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;
-        // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {
-        robots[0].SetTendonLength(tendonLengthFrame[frame_count], segLengthFrame[frame_count]);
+    for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
+        // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
+        // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
+        bool reachTarget = controller->PathPlanningUpdate(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
+        allDisksPose.clear();
+        robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());
         // }
-        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();
-        tData.append((frame_count + 1) * 0.01);
-        xData.append(curTipPose(0, 3));
-        yData.append(curTipPose(1, 3));
-        zData.append(curTipPose(2, 3));
+        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
         visualizer->UpdateVisualization(allDisksPose);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
+        UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
+
+        if (reachTarget)
+            break;
+        else if (frameCount == maxFrameNum - 1)
+            QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
     }
-    xPlot->setData(tData, xData);
-    xPlot->rescaleAxes();
-    yPlot->setData(tData, yData);
-    yPlot->rescaleAxes();
-    zPlot->setData(tData, zData);
-    zPlot->rescaleAxes();
-    posePlot.replot();
 
     tendonLengthChangeOld = tendonLengthChangeUI;
     segLengthOld = segLengthUI;
@@ -376,7 +370,13 @@ void MainWindow::DeletePosePlot()
     delete zPlotAxes;
 }
 
-void MainWindow::UpdatePosePlot()
+void MainWindow::UpdatePosePlot(double t, Eigen::Matrix4d pose)
 {
-
+    xPlot->addData(t, pose(0, 3));
+    xPlot->rescaleAxes();
+    yPlot->addData(t, pose(1, 3));
+    yPlot->rescaleAxes();
+    zPlot->addData(t, pose(2, 3));
+    zPlot->rescaleAxes();
+    posePlot.replot();
 }

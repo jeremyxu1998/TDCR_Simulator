@@ -7,7 +7,7 @@
 #include "tendon_robot.h"
 #include "robot_controller.h"
 #include "vtk_visualizer.h"
-#include "qcustomplot.h"
+#include "lib/qcustomplot.h"
 
 #include <QSplitter>
 #include <QButtonGroup>
@@ -41,7 +41,6 @@ private:
     QCustomPlot posePlot;
     QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes;
     QCPGraph *xPlot, *yPlot, *zPlot;
-    QVector<double> tData, xData, yData, zData;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
@@ -50,7 +49,9 @@ private:
     std::vector<Eigen::MatrixXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
 
-    BaseController controller;
+    BaseController* controller;
+    int maxFrameNum;  // Maximum number of frame updates per path planning calculation
+    int frameFreq;  // Frame update frequency;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);
@@ -61,6 +62,6 @@ private:
     // Tip pose plotting
     void InitPosePlot();
     void DeletePosePlot();
-    void UpdatePosePlot();
+    void UpdatePosePlot(double t, Eigen::Matrix4d pose);
 };
 #endif // MAINWINDOW_H

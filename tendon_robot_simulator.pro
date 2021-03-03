@@ -19,14 +19,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    qcustomplot.cpp \
+    lib/qcustomplot.cpp \
     robot_controller.cpp \
     tendon_robot.cpp \
     vtk_visualizer.cpp
 
 HEADERS += \
     mainwindow.h \
-    qcustomplot.h \
+    lib/qcustomplot.h \
     robot_controller.h \
     tendon_robot.h \
     vtk_visualizer.h
