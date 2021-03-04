@@ -28,10 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
         return;
     }
     ReadFromXMLFile(xmlDir);
-    for (int i = 0; i < robots.size(); i++) {
-        InitializeRobotConfig(robots[i], i);
-        robots[i].SetTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
-    }
+
     connect(&robotSelectBtnGroup, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
             [=](int id){
                 selectedRobotId = id - 1;
@@ -39,6 +36,10 @@ MainWindow::MainWindow(QWidget *parent)
             });
     ui->robot_1_Radio->setChecked(true);
     selectedRobotId = 0;
+    for (int i = 0; i < robots.size(); i++) {
+        InitializeRobotConfig(robots[i], i);
+        robots[i].SetTendonLength(tendonLengthChangeUI[i], segLengthUI[i]);
+    }
 
     // Controller initialization
     maxFrameNum = 1000;
