@@ -268,14 +268,9 @@ double TendonRobot::ConstCurvSegment::getPhi()
     return m_twistAngle;
 }
 
-double TendonRobot::ConstCurvSegment::getCurTendonLengthChange(int tendCount)
+Eigen::VectorXd TendonRobot::ConstCurvSegment::getCurTendonLengthChange()
 {
-    if (tendCount < m_numTendon) {
-        return m_tendonLengthChange[tendCount];
-    }
-    else {
-        return 0;  // TODO: out of range handle
-    }
+    return m_tendonLengthChange;
 }
 
 double TendonRobot::ConstCurvSegment::getCurExtLength()

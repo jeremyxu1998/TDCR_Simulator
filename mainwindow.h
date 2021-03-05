@@ -51,7 +51,7 @@ private:
 
     BaseController* controller;
     int maxFrameNum;  // Maximum number of frame updates per path planning calculation
-    int frameFreq;  // Frame update frequency;
+    int frameFreq;  // Frame update frequency
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);

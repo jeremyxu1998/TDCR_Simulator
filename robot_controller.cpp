@@ -32,8 +32,9 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
     int numTendon = targetTendonLengthChange.cols();
     int qCount = 0;
     for (int j = 0; j < robot.getNumSegment(); j++) {  // Pack segment parameter matrices to q
+        Eigen::VectorXd initTendonLengthChange = robot.getSegments()[j].getCurTendonLengthChange();
         for (int i = 0; i < numTendon - 1; i++) {
-            q_cur(qCount) = robot.getSegments()[j].getCurTendonLengthChange(i);
+            q_cur(qCount) = initTendonLengthChange(i);
             qCount++;
         }
         q_cur(qCount) = robot.getSegments()[j].getCurExtLength();
@@ -83,7 +84,10 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
             J_body.col(i) = J_bi;
         }
 
-        /* Left Pseudo Inverse with Joint Limit */
+        /* Damped Left Pseudo Inverse with Joint Limit
+         * Reference for damped pseudo inverse: A.S. Deo, I.D. Walker: Overview of damped least-squares methods for inverse kinematics of robot manipulators, P46
+         * Reference for joint limit cost function: S. Lilge, J. Burgner-Kahrs: Enforcing Shape Constraints during Motion of Concentric Tube Continuum Robots, P3
+         */
         Eigen::MatrixXd JTJ = J_body.transpose() * J_body;
         Eigen::MatrixXd weightMat = jointLimitWeight * Eigen::MatrixXd::Identity(numDOF, numDOF);  // Damping for JTJ matrix inverse close to singularity
         Eigen::VectorXd negGradCostJointLimit = Eigen::VectorXd::Zero(numDOF);  // v: cost function for joint limit task
@@ -196,9 +200,7 @@ void BaseController::UnpackRobotConfig(TendonRobot & robot, int numTendon, const
 void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)
 {
     double multiplier = 1.0 / precision;
-    // Eigen::VectorXi valsScaled = (vals * multiplier).array().round();
-    // vals = valsScaled.cast<double>() * precision;
-    for (int i = 0; i < vals.size(); i++) {  // TODO: method without using loop
+    for (int i = 0; i < vals.size(); i++) {
         long valScaled = static_cast<long>(vals[i] * multiplier);
         vals[i] = static_cast<double>(valScaled) * precision;
     }
