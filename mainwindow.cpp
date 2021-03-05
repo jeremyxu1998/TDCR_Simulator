@@ -154,6 +154,7 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
                                 bbLenBox->setValue(boxVal);
                             });
                     bbLenBox->setValue(segLengthUI[robotId](seg) * 1000.0);
+                    bbLenBox->setStyleSheet("background-color: white;");
                 }
                 else {
                     bbLenBox->setEnabled(false);

@@ -1,8 +1,8 @@
 <TACREnvironemnt>
     <TendonRobot NumberOfSegments="3" Name="Metabot">
         <Segment Number="1" Type="ConstantCurvatureSegment">
-            <MaxExtendLength>25</MaxExtendLength>
-            <InitialExtendLength>15</InitialExtendLength>
+            <MaxExtendLength>40</MaxExtendLength>
+            <InitialExtendLength>16.5</InitialExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>10</NumDisk>
             <PitchRadius>2.5</PitchRadius>
@@ -12,8 +12,8 @@
             <InitialRotAngle>0.0</InitialRotAngle>
         </Segment>
         <Segment Number="2" Type="ConstantCurvatureSegment">
-            <MaxExtendLength>25</MaxExtendLength>
-            <InitialExtendLength>15</InitialExtendLength>
+            <MaxExtendLength>40</MaxExtendLength>
+            <InitialExtendLength>16.5</InitialExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>10</NumDisk>
             <PitchRadius>2.5</PitchRadius>
@@ -23,8 +23,8 @@
             <InitialRotAngle>0.0</InitialRotAngle>
         </Segment>
         <Segment Number="3" Type="ConstantCurvatureSegment">
-            <MaxExtendLength>25</MaxExtendLength>
-            <InitialExtendLength>15</InitialExtendLength>
+            <MaxExtendLength>40</MaxExtendLength>
+            <InitialExtendLength>16.5</InitialExtendLength>
             <NumTendon>3</NumTendon>
             <NumDisk>10</NumDisk>
             <PitchRadius>2.5</PitchRadius>

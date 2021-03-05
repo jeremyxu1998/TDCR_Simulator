@@ -122,6 +122,14 @@ Eigen::Matrix4d & TendonRobot::GetTipPose()
     m_tipPose = Eigen::Matrix4d::Identity();
     for (int j = 0; j < m_numSegment; j++) {
         m_tipPose *= m_segments[j].getSegTipPose();
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = m_tipPose.topLeftCorner(3,3) * offsetRel;
+            m_tipPose.block(0, 3, 3, 1) += offsetWorld;
+        }
     }
     return m_tipPose;
 }
@@ -179,6 +187,14 @@ Eigen::Matrix4d TendonRobot::CalcTipPose(const Eigen::MatrixXd &robotTendonLengt
     for (int j = 0; j < m_numSegment; j++) {
         Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
         tipPose *= m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]);
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = tipPose.topLeftCorner(3,3) * offsetRel;
+            tipPose.block(0, 3, 3, 1) += offsetWorld;
+        }
     }
     return tipPose;
 }
@@ -209,7 +225,7 @@ TendonRobot::ConstCurvSegment::ConstCurvSegment(
                               m_diskRadius(diskRadius / 1000.0),
                               m_diskThickness(diskThickness / 1000.0)
 {
-    m_minSegLength = m_numDisk * m_diskThickness;
+    m_minSegLength = (m_numDisk - 1) * m_diskThickness;
 }
 
 int TendonRobot::ConstCurvSegment::getDiskNum()
