@@ -19,7 +19,7 @@ private:
     double jointLimitWeight;  // Damping for JTJ matrix inverse close to singularity
     double stepSize;
     double taskWeightSegLen, taskWeightCurv;  // Sub-task (joint limit) weight, specific to each robot config
-    double PGain;  // Proportional gain
+    double PGainTendon, PGainBbone;  // Proportional gain
     double posAccuReq;  // Position accuracy requirement
 
     Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);

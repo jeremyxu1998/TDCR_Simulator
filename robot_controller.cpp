@@ -9,7 +9,8 @@ BaseController::BaseController(int freq)
     stepSize = 1e-7;
     taskWeightSegLen = 0.05;
     taskWeightCurv = 0.5;
-    PGain = 5;
+    PGainTendon = 2;
+    PGainBbone = 12;
     posAccuReq = 5e-4;
 }
 
@@ -45,6 +46,17 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
     UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
     assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
     assert(curSegLength.size() == targetSegLength.size());
+
+    Eigen::VectorXd PGain(numDOF);
+    qCount = 0;
+    for (int j = 0; j < robot.getNumSegment(); j++) {
+        for (int i = 0; i < numTendon - 1; i++) {
+            PGain(qCount) = PGainTendon;
+            qCount++;
+        }
+        PGain(qCount) = PGainBbone;
+        qCount++;
+    }
 
     int maxSteps = calcFreq / updateFreq;
     for (int step = 0; step < maxSteps; step++) {
@@ -117,7 +129,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
 
         // Optimial solution equation for multi-task control
         Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCostJointLimit);
-        q_cur = q_cur + q_dot * PGain * (1.0 / static_cast<double>(calcFreq));
+        q_cur = q_cur + q_dot.cwiseProduct(PGain) * (1.0 / static_cast<double>(calcFreq));
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
 
