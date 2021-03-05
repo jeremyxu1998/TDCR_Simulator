@@ -7,11 +7,12 @@ BaseController::BaseController(int freq)
     qEpsilon = 1e-5;
     jointLimitWeight = 10;
     stepSize = 1e-7;
-    taskWeightSegLen = 0.05;
+    taskWeightSegLen = 0.01;
     taskWeightCurv = 0.5;
     PGainTendon = 2;
     PGainBbone = 12;
     posAccuReq = 5e-4;
+    oriAccuReq = 0.05;  // rad
 }
 
 BaseController::~BaseController()
@@ -23,6 +24,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
 {
     Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
     Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
+    Eigen::Matrix3d R_target = T_target.topLeftCorner(3,3);
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
 
     Eigen::Matrix4d T_cur = T_init;
@@ -81,7 +83,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
             J_body.col(i) = J_bi;
         }
 
-        // Left Pseudo Inverse with Joint Limit
+        /* Left Pseudo Inverse with Joint Limit */
         Eigen::MatrixXd JTJ = J_body.transpose() * J_body;
         Eigen::MatrixXd weightMat = jointLimitWeight * Eigen::MatrixXd::Identity(numDOF, numDOF);  // Damping for JTJ matrix inverse close to singularity
         Eigen::VectorXd negGradCostJointLimit = Eigen::VectorXd::Zero(numDOF);  // v: cost function for joint limit task
@@ -134,7 +136,9 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
         T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
-        if ((p_target - p_cur).norm() < posAccuReq) {  // TODO: verify orientation
+        Eigen::Matrix3d rotDiff = T_cur.topLeftCorner(3,3).transpose() * R_target;
+        double angleDiff = acos(std::max(std::min((rotDiff.trace() - 1) / 2.0, 1.0), -1.0));
+        if ((p_target - p_cur).norm() < posAccuReq && angleDiff < oriAccuReq) {
             reachTarget = true;
             break;
         }

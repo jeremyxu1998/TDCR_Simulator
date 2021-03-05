@@ -39,8 +39,8 @@ private:
 
     // Tip pose plotting
     QCustomPlot posePlot;
-    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes;
-    QCPGraph *xPlot, *yPlot, *zPlot;
+    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes;
+    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
