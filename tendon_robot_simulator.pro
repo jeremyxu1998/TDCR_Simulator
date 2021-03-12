@@ -17,6 +17,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    devices/GeomagicTouch/geomagictouchinput.cpp \
+    devices/inputdevice.cpp \
     main.cpp \
     mainwindow.cpp \
     lib/qcustomplot.cpp \
@@ -25,6 +27,8 @@ SOURCES += \
     vtk_visualizer.cpp
 
 HEADERS += \
+    devices/GeomagicTouch/geomagictouchinput.h \
+    devices/inputdevice.h \
     mainwindow.h \
     lib/qcustomplot.h \
     robot_controller.h \
@@ -46,6 +50,11 @@ LIBS += -lvtkCommonMath-8.2
 
 # Include Eigen Library
 INCLUDEPATH += /usr/local/include/eigen3/
+
+# Include Geomagic Touch Libraries
+PATH_OPENHAPTICS = /opt/OpenHaptics/Developer/3.4-0/libsrc
+INCLUDEPATH += /opt/OpenHaptics/Academic/3.3-1/libsrc
+LIBS+=-lHD -lHDU -lSnapConstraints
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
