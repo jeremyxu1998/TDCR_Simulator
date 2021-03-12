@@ -22,10 +22,10 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
     }
 
     originAxes = vtkSmartPointer<vtkAxesActor>::New();
-    originAxes->SetTotalLength(0.03, 0.03, 0.03);
+    originAxes->SetTotalLength(0.01, 0.01, 0.01);
     originAxes->SetShaftTypeToCylinder();
-    originAxes->SetCylinderRadius(0.04);
-    originAxes->SetConeRadius(0.4);
+    originAxes->SetCylinderRadius(0.06);
+    originAxes->SetConeRadius(0.5);
     originAxes->AxisLabelsOff();
 
     renderer = vtkSmartPointer<vtkRenderer>::New();
@@ -48,6 +48,7 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
         }
         renderer->AddActor(robotsVisual[robotCount].baseAxes);
         renderer->AddActor(robotsVisual[robotCount].tipAxes);
+        renderer->AddActor(robotsVisual[robotCount].targetAxes);
     }
     renderer->AddActor(originAxes);
 
@@ -74,6 +75,13 @@ bool VtkVisualizer::UpdateVisualization(const std::vector<std::vector<Eigen::Mat
     return true;
 }
 
+bool VtkVisualizer::UpdateTargetTipPose(const Eigen::Matrix4d & pose)
+{
+    robotsVisual[0].UpdateTargetPose(pose);
+    renderWindow->Render();
+    return true;
+}
+
 VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
 {
     unsigned segmentNum = robot.getSegments().size();
@@ -92,7 +100,7 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
             diskActor->SetMapper(diskMapper);
             diskActor->GetProperty()->SetColor(0.8, 0.8, 0.8);
             if (diskCount == 0) {
-                diskActor->GetProperty()->SetColor(0.0, 0.0, 0.8);  // Test visualization purpose, TODO: remove
+                diskActor->GetProperty()->SetColor(0.0, 0.0, 0.8);
             }
             diskActors.push_back(diskActor);
         }
@@ -152,16 +160,18 @@ VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
 
     baseAxes = vtkSmartPointer<vtkAxesActor>::New();
     tipAxes = vtkSmartPointer<vtkAxesActor>::New();
-    setAxesStyle(baseAxes);
-    setAxesStyle(tipAxes);
+    targetAxes = vtkSmartPointer<vtkAxesActor>::New();
+    setAxesStyle(baseAxes, 0.02, 0.03, 0.3);
+    setAxesStyle(tipAxes, 0.02, 0.03, 0.3);
+    setAxesStyle(targetAxes, 0.01, 0.06, 0.5);
 }
 
-void VtkVisualizer::TACRVisual::setAxesStyle(vtkSmartPointer<vtkAxesActor> axes)
+void VtkVisualizer::TACRVisual::setAxesStyle(vtkSmartPointer<vtkAxesActor> axes, double axisLength, double cylinderRadius, double coneRadius)
 {
-    axes->SetTotalLength(0.02, 0.02, 0.02);
+    axes->SetTotalLength(axisLength, axisLength, axisLength);
     axes->SetShaftTypeToCylinder();
-    axes->SetCylinderRadius(0.03);
-    axes->SetConeRadius(0.3);
+    axes->SetCylinderRadius(cylinderRadius);
+    axes->SetConeRadius(coneRadius);
     axes->AxisLabelsOff();
 }
 
@@ -223,6 +233,11 @@ bool VtkVisualizer::TACRVisual::UpdateRobotVisualization(const std::vector<Eigen
     SetAxesPose(tipAxes, robotDisksPose.back());
 
     return true;
+}
+
+bool VtkVisualizer::TACRVisual::UpdateTargetPose(const Eigen::Matrix4d & pose)
+{
+    SetAxesPose(targetAxes, pose);
 }
 
 bool VtkVisualizer::TACRVisual::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose)

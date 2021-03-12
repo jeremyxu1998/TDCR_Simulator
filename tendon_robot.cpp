@@ -104,8 +104,8 @@ bool TendonRobot::SetFromDomElement(QDomElement const& elem)
 
         // TODO: Segment type check
 
-        ConstCurvSegment segment(curNode.firstChildElement("BackboneLength").text().toDouble(),
-                                 curNode.firstChildElement("ExtendLength").text().toDouble(),
+        ConstCurvSegment segment(curNode.firstChildElement("InitialExtendLength").text().toDouble(),
+                                 curNode.firstChildElement("MaxExtendLength").text().toDouble(),
                                  curNode.firstChildElement("NumTendon").text().toInt(),
                                  curNode.firstChildElement("NumDisk").text().toInt(),
                                  curNode.firstChildElement("PitchRadius").text().toDouble(),
@@ -122,6 +122,14 @@ Eigen::Matrix4d & TendonRobot::GetTipPose()
     m_tipPose = Eigen::Matrix4d::Identity();
     for (int j = 0; j < m_numSegment; j++) {
         m_tipPose *= m_segments[j].getSegTipPose();
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = m_tipPose.topLeftCorner(3,3) * offsetRel;
+            m_tipPose.block(0, 3, 3, 1) += offsetWorld;
+        }
     }
     return m_tipPose;
 }
@@ -168,6 +176,29 @@ bool TendonRobot::SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChang
     return true;
 }
 
+Eigen::Matrix4d TendonRobot::CalcTipPose(const Eigen::MatrixXd &robotTendonLengthChange, const Eigen::VectorXd &robotSegLength)
+{
+    // Input size check
+    if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {
+        return Eigen::Matrix4d::Identity();
+    }
+
+    Eigen::Matrix4d tipPose = Eigen::Matrix4d::Identity();
+    for (int j = 0; j < m_numSegment; j++) {
+        Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
+        tipPose *= m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]);
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = tipPose.topLeftCorner(3,3) * offsetRel;
+            tipPose.block(0, 3, 3, 1) += offsetWorld;
+        }
+    }
+    return tipPose;
+}
+
 int TendonRobot::getNumSegment()
 {
     return m_numSegment;
@@ -179,14 +210,14 @@ std::vector<TendonRobot::ConstCurvSegment> & TendonRobot::getSegments()
 }
 
 TendonRobot::ConstCurvSegment::ConstCurvSegment(
-                                double segLength,
+                                double initExtLength,
                                 double maxExtLength,
                                 int numTendon,
                                 int numDisk,
                                 double pitchRadius,
                                 double diskRadius,
                                 double diskThickness)
-                            : m_segLength(segLength / 1000.0),
+                            : m_curExtLength(initExtLength / 1000.0),
                               m_maxExtLength(maxExtLength / 1000.0),
                               m_numTendon(numTendon),
                               m_numDisk(numDisk),
@@ -194,7 +225,7 @@ TendonRobot::ConstCurvSegment::ConstCurvSegment(
                               m_diskRadius(diskRadius / 1000.0),
                               m_diskThickness(diskThickness / 1000.0)
 {
-    m_curExtLength = 0.0;
+    m_minSegLength = (m_numDisk - 1) * m_diskThickness;
 }
 
 int TendonRobot::ConstCurvSegment::getDiskNum()
@@ -209,17 +240,12 @@ int TendonRobot::ConstCurvSegment::getTendonNum()
 
 double TendonRobot::ConstCurvSegment::getMinSegLength()
 {
-    return m_segLength;
+    return m_minSegLength;
 }
 
 double TendonRobot::ConstCurvSegment::getMaxExtSegLength()
 {
     return m_maxExtLength;
-}
-
-double TendonRobot::ConstCurvSegment::getCurSegLength()
-{
-    return (m_segLength + m_curExtLength);
 }
 
 double TendonRobot::ConstCurvSegment::getPitchRadius()
@@ -240,6 +266,21 @@ double TendonRobot::ConstCurvSegment::getDiskThickness()
 double TendonRobot::ConstCurvSegment::getPhi()
 {
     return m_twistAngle;
+}
+
+Eigen::VectorXd TendonRobot::ConstCurvSegment::getCurTendonLengthChange()
+{
+    return m_tendonLengthChange;
+}
+
+double TendonRobot::ConstCurvSegment::getCurExtLength()
+{
+    return m_curExtLength;
+}
+
+double TendonRobot::ConstCurvSegment::getCurSegLength()
+{
+    return (m_minSegLength + m_curExtLength);
 }
 
 Eigen::Matrix4d & TendonRobot::ConstCurvSegment::getSegTipPose()
@@ -266,7 +307,7 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
     else {
         return false;
     }
-    double curExtLength = curSegLength - m_segLength;  // l_j
+    double curExtLength = curSegLength - m_minSegLength;  // l_j
     // check extension not exceeding maximum
     if (curExtLength < 0.0 || curExtLength > m_maxExtLength) {
         return false;
@@ -276,7 +317,7 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
 
     bool zeroInputCase = true;
     int nonZeroId = 0;
-    for (int i = 0; i < m_numTendon; i++) {
+    for (int i = 0; i < m_numTendon - 1; i++) {  // An inelegant way to avoid >Ɛ changes on last tendon
         if (fabs(q(i)) > EPSILON) {
             zeroInputCase = false;
             nonZeroId = i;  // The first non-zero input tendon
@@ -350,4 +391,99 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
     m_segTipPose = m_diskPose[m_numDisk-1];
 
     return true;
+}
+
+Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eigen::VectorXd &tendonLengthChange, const double curSegLength)
+{
+    Eigen::VectorXd q;
+    if (tendonLengthChange.rows() == m_numTendon) {
+        q = tendonLengthChange;
+    }
+    else {
+        return Eigen::Matrix4d::Identity();
+    }
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon - 1; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    Eigen::Matrix4d segTipPose = Eigen::Matrix4d::Identity();
+    if (zeroInputCase) {
+        segTipPose(2,3) = curSegLength;
+    }
+    else {
+        /* Robot dependent mapping: tendon length --> k,phi,l */
+        double beta = 2 * M_PI / m_numTendon;
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        double phi = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;  // Twist angle
+        double curvature = -(q(nonZeroId)) / (curSegLength * m_pitchRadius * cos(phi + nonZeroId * beta));
+
+        /* Robot independent mapping: k,phi,l --> T */
+        double phiCcw = -phi;  // Twist angle is defined CW, however tendon sequence (and coordinate) is CCW
+        Eigen::Matrix4d rotPhiTrans;
+        rotPhiTrans << cos(phiCcw), -sin(phiCcw), 0, 0,
+                       sin(phiCcw), cos(phiCcw), 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1;
+        Eigen::Matrix4d bendTrans;
+        double theta = curvature * curSegLength;
+        bendTrans << cos(theta), 0, sin(theta), (1/curvature) * (1 - cos(theta)),
+                     0, 1, 0, 0,
+                     -sin(theta), 0, cos(theta), (1/curvature) * sin(theta),
+                     0, 0, 0, 1;
+        Eigen::Matrix4d rotBackPhiTrans;
+        rotBackPhiTrans << cos(-phiCcw), -sin(-phiCcw), 0, 0,
+                           sin(-phiCcw), cos(-phiCcw), 0, 0,
+                           0, 0, 1, 0,
+                           0, 0, 0, 1;
+
+        segTipPose = rotPhiTrans * bendTrans * rotBackPhiTrans;
+    }
+
+    return segTipPose;
+}
+
+double TendonRobot::ConstCurvSegment::CalcCurvature(const Eigen::VectorXd & q, const double l)
+{
+    if (q.rows() != m_numTendon) {
+        return 0.0;
+    }
+
+    bool zeroInputCase = true;
+    int nonZeroId = 0;
+    for (int i = 0; i < m_numTendon - 1; i++) {
+        if (fabs(q(i)) > EPSILON) {
+            zeroInputCase = false;
+            nonZeroId = i;  // The first non-zero input tendon
+            break;
+        }
+    }
+
+    if (zeroInputCase) {
+        return 0.0;
+    }
+    else {
+        /* Robot dependent mapping: tendon length --> k,phi,l */
+        double beta = 2 * M_PI / m_numTendon;
+        // "nonZeroId * beta" to switch between "first non-zero input tendon" and "first tendon"
+        double phi = atan2(-q(nonZeroId) * cos(beta) + q(nonZeroId+1), -q(nonZeroId) * sin(beta)) - nonZeroId * beta;
+        double curvature = -(q(nonZeroId)) / (l * m_pitchRadius * cos(phi + nonZeroId * beta));
+        return curvature;
+    }
+}
+
+double TendonRobot::ConstCurvSegment::CalcMaxCurvature(const double l)
+{
+    /* There are two cases, pick the smaller one as curvature limit:
+     * (1) Edge of spacer disks touching each other
+     * (2) Tip is bending 180 deg from base */
+    double maxCurvDisk = (l - m_numDisk * m_diskThickness) / (l * m_diskRadius);
+    double maxCurvTip = M_PI / l;  // curvature = 1/r for circle
+    return std::min(maxCurvDisk, maxCurvTip);
 }

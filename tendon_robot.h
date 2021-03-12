@@ -6,7 +6,7 @@
 #include <QDomElement>
 #include <Eigen/Dense>
 
-#define EPSILON 1e-7
+#define EPSILON 1e-9
 
 class TendonRobot
 {
@@ -20,12 +20,14 @@ public:
     std::vector<Eigen::Matrix4d> GetAllDisksPose();
 
     bool SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
+    // Simple version of SetTendonLength(), NOT update robot geometry
+    Eigen::Matrix4d CalcTipPose(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
 
 private:
     class ConstCurvSegment
     {
     public:
-        ConstCurvSegment(double segLength,
+        ConstCurvSegment(double initExtLength,
                          double maxExtLength,
                          int numTendon,
                          int numDisk,
@@ -37,19 +39,25 @@ private:
         int getTendonNum();
         double getMinSegLength();
         double getMaxExtSegLength();
-        double getCurSegLength();  // TODO: change function name
         double getPitchRadius();
         double getDiskRadius();
         double getDiskThickness();
         double getPhi();
 
+        Eigen::VectorXd getCurTendonLengthChange();
+        double getCurExtLength();
+        double getCurSegLength();
         Eigen::Matrix4d & getSegTipPose();
         std::vector<Eigen::Matrix4d> & getSegDisksPose();
 
         bool ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
+        // Simple version of FK(), calculate and return tip pose only and does NOT update robot geometry
+        Eigen::Matrix4d ForwardKinematicsSimple(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
+        double CalcCurvature(const Eigen::VectorXd & q, const double l);  // Robot dependent mapping only
+        double CalcMaxCurvature(const double l);  // Max curvature given current length l
     private:
         // Property
-        double m_segLength;  // l_j = m_segLength + m_curExtLength
+        double m_minSegLength;  // l_j = m_minSegLength + m_curExtLength
         double m_maxExtLength;
         int m_numTendon;  // i_j
         int m_numDisk;
@@ -70,7 +78,7 @@ private:
 
 public:
     int getNumSegment();
-    std::vector<ConstCurvSegment> & getSegments();  // TODO: const
+    std::vector<ConstCurvSegment> & getSegments();
 
 private:
     int m_numSegment;  // j

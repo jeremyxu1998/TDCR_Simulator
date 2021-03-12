@@ -1,7 +1,7 @@
 QT += core gui
 QT += xml
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 CONFIG += c++11
 
@@ -19,12 +19,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
+    lib/qcustomplot.cpp \
     robot_controller.cpp \
     tendon_robot.cpp \
     vtk_visualizer.cpp
 
 HEADERS += \
     mainwindow.h \
+    lib/qcustomplot.h \
     robot_controller.h \
     tendon_robot.h \
     vtk_visualizer.h
