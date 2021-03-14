@@ -31,6 +31,7 @@ protected:
 private slots:
     void on_posePlotCheckBox_stateChanged(int checked);
     void on_calculateButton_clicked();
+    void on_constraintAdd_clicked();
 
 private:
     Ui::MainWindow *ui;

@@ -11,6 +11,8 @@ BaseController::BaseController(int freq)
     taskWeightCurv = 0.5;
     PGain = 5;
     posAccuReq = 5e-4;
+    constraintInnerRadius = 5.0;
+    constraintOuterRadius = 10.0;
 }
 
 BaseController::~BaseController()
@@ -186,4 +188,83 @@ void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)
         long valScaled = static_cast<long>(vals[i] * multiplier);
         vals[i] = static_cast<double>(valScaled) * precision;
     }
+}
+
+// Constraints
+
+int BaseController::getNumConstraints()
+{
+    return m_numConstraints;
+}
+
+std::vector<BaseController::PointConstraint> & BaseController::getConstraints()
+{
+    return m_pointConstraints;
+}
+
+void BaseController::addPointConstraint(QString constraintLabel, Eigen::Vector3d constraintPosition)
+{
+    PointConstraint newConstraint(constraintLabel,
+                                  constraintPosition,
+                                  constraintInnerRadius,
+                                  constraintOuterRadius
+                                  );
+    
+    m_pointConstraints.emplace_back(newConstraint);
+    m_numConstraints = m_pointConstraints.size();
+    return;
+}
+
+void BaseController::deletePointConstraint(QString constraintLabel)
+{
+    int constraintIdx = 1 ; //Find constraint index
+    m_pointConstraints.erase(m_pointConstraints.begin() + constraintIdx);
+    m_numConstraints = m_pointConstraints.size();
+}
+
+BaseController::PointConstraint::PointConstraint(
+                                QString initLabel,
+                                Eigen::Vector3d initPosition,
+                                double initInnerRadius,
+                                double initOuterRadius)
+                            : m_pointLabel(initLabel),
+                              m_pointPosition(initPosition),
+                              m_pointInnerRadius(initInnerRadius / 1000.0),
+                              m_pointOuterRadius(initOuterRadius / 1000.0)
+{
+}
+
+QString BaseController::PointConstraint::getLabel()
+{
+    return m_pointLabel;
+}
+
+Eigen::Vector3d BaseController::PointConstraint::getPosition()
+{
+    return m_pointPosition;
+}
+
+double BaseController::PointConstraint::getInnerRadius()
+{
+    return m_pointInnerRadius;
+}
+
+double BaseController::PointConstraint::getOuterRadius()
+{
+    return m_pointOuterRadius;
+}
+
+void BaseController::PointConstraint::updatePosition(Eigen::Vector3d newPosition)
+{
+    m_pointPosition = newPosition;
+}
+
+void BaseController::PointConstraint::updateInnerRadius(double newRadius)
+{
+    m_pointInnerRadius = newRadius;
+}
+
+void BaseController::PointConstraint::updateOuterRadius(double newRadius)
+{
+    m_pointOuterRadius = newRadius;
 }

@@ -237,7 +237,7 @@ First segment:</string>
         <height>0</height>
        </size>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="constraintLayout">
        <item>
         <widget class="QLabel" name="constraintLabel">
          <property name="text">
@@ -260,7 +260,7 @@ First segment:</string>
         </widget>
        </item>
        <item>
-        <widget class="Line" name="line">
+        <widget class="Line" name="divLine">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -320,25 +320,24 @@ First segment:</string>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="maximum">
+            <number>99</number>
+           </property>
+           <property name="singleStep">
+            <number>1</number>
+           </property>
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="backboneBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+           <property name="tickInterval">
+            <number>0</number>
            </property>
           </widget>
          </item>
         </layout>
        </item>
        <item>
-        <widget class="QLabel" name="RadiusLabel">
+        <widget class="QLabel" name="innerRadiusLabel">
          <property name="text">
           <string>Raduis of Influence (Inner)</string>
          </property>
@@ -347,22 +346,9 @@ First segment:</string>
        <item>
         <layout class="QHBoxLayout" name="innerRadSize">
          <item>
-          <widget class="QSlider" name="innerRadSlider">
+          <widget class="QDoubleSpinBox" name="innerRadBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="innerRadBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -372,7 +358,7 @@ First segment:</string>
         </layout>
        </item>
        <item>
-        <widget class="QLabel" name="label">
+        <widget class="QLabel" name="outerRadiusLabel">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -387,22 +373,9 @@ First segment:</string>
        <item>
         <layout class="QHBoxLayout" name="outerRadSize">
          <item>
-          <widget class="QSlider" name="outerRadSlider">
+          <widget class="QDoubleSpinBox" name="outerRadBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="outerRadBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>

@@ -7,8 +7,6 @@
 
 TendonRobot::TendonRobot()
 {
-    constraintInnerRadius = 5.0;
-    constraintOuterRadius = 10.0;
 }
 
 TendonRobot::~TendonRobot()
@@ -193,32 +191,6 @@ int TendonRobot::getNumSegment()
 std::vector<TendonRobot::ConstCurvSegment> & TendonRobot::getSegments()
 {
     return m_segments;
-}
-
-int TendonRobot::getNumConstraints()
-{
-    return m_numConstraints;
-}
-
-std::vector<TendonRobot::PointConstraint> & TendonRobot::getConstraints()
-{
-    return m_pointConstraints;
-}
-
-void TendonRobot::addPointConstraint()
-{
-    Eigen::Vector3d constraintPosition = m_tipPose.topRightCorner(3,1);
-    PointConstraint newConstraint(constraintPosition,
-                                  constraintInnerRadius,
-                                  constraintOuterRadius
-                                  );
-    
-    m_pointConstraints.emplace_back(newConstraint);
-}
-
-void TendonRobot::deletePointConstraint(const int constraintIdx)
-{
-    m_pointConstraints.erase(m_pointConstraints.begin() + constraintIdx);
 }
 
 TendonRobot::ConstCurvSegment::ConstCurvSegment(
@@ -503,44 +475,4 @@ double TendonRobot::ConstCurvSegment::CalcMaxCurvature(const double l)
     double maxCurvDisk = (l - m_numDisk * m_diskThickness) / (l * m_diskRadius);
     double maxCurvTip = M_PI / l;  // curvature = 1/r for circle
     return std::min(maxCurvDisk, maxCurvTip);
-}
-
-TendonRobot::PointConstraint::PointConstraint(
-                                Eigen::Vector3d initPosition,
-                                double initInnerRadius,
-                                double initOuterRadius)
-                            : m_pointPosition(initPosition),
-                              m_pointInnerRadius(initInnerRadius / 1000.0),
-                              m_pointOuterRadius(initOuterRadius / 1000.0)
-{
-}
-
-Eigen::Vector3d TendonRobot::PointConstraint::getPosition()
-{
-    return m_pointPosition;
-}
-
-double TendonRobot::PointConstraint::getInnerRadius()
-{
-    return m_pointInnerRadius;
-}
-
-double TendonRobot::PointConstraint::getOuterRadius()
-{
-    return m_pointOuterRadius;
-}
-
-void TendonRobot::PointConstraint::updatePosition(Eigen::Vector3d newPosition)
-{
-    m_pointPosition = newPosition;
-}
-
-void TendonRobot::PointConstraint::updateInnerRadius(double newRadius)
-{
-    m_pointInnerRadius = newRadius;
-}
-
-void TendonRobot::PointConstraint::updateOuterRadius(double newRadius)
-{
-    m_pointOuterRadius = newRadius;
 }

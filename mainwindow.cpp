@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <thread>
+#include <stdlib.h>
 #include <QFileDialog>
 #include <QKeyEvent>
 #include <QDomDocument>
@@ -340,6 +341,22 @@ void MainWindow::on_calculateButton_clicked()
     }
     // }
 
+    return;
+}
+
+void MainWindow::on_constraintAdd_clicked()
+{
+    // Create list item with unique ID
+    int randID = rand() % 10000;
+    QString newConstraintLabel = "constraint_" + QString::number(selectedRobotId + 1) + "_" + QString::number(randID);
+    new QListWidgetItem(newConstraintLabel, ui->constraintList);
+
+    Eigen::Vector3d curTipPosition = robots[selectedRobotId].GetTipPose().topRightCorner(3,1);
+
+    // Create new constraint in target robot object
+    controller->addPointConstraint(newConstraintLabel, curTipPosition);
+
+    // Create sphere in visualizer with set radii at the robot pose tip
     return;
 }
 

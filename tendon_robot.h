@@ -76,45 +76,13 @@ private:
         Eigen::Matrix4d m_segTipPose;  // Same as the last disk pose        
     };
 
-    class PointConstraint
-    {
-        public:
-            PointConstraint(Eigen::Vector3d initPosition,
-                            double initInnerRadius,
-                            double initOuterRadius);
-            
-            Eigen::Vector3d getPosition();
-            double getInnerRadius();
-            double getOuterRadius();
-
-            void updatePosition(Eigen::Vector3d newPosition);
-            void updateInnerRadius(double newRadius);
-            void updateOuterRadius(double newRadius); 
-
-        private:
-
-            Eigen::Vector3d m_pointPosition;
-            double m_pointInnerRadius;
-            double m_pointOuterRadius;
-    };
-
 public:
     int getNumSegment();
     std::vector<ConstCurvSegment> & getSegments();  // TODO: const
 
-    int getNumConstraints();
-    std::vector<PointConstraint> & getConstraints();
-    void addPointConstraint();
-    void deletePointConstraint(const int constraintIdx);
-
 private:
     int m_numSegment;  // j
     std::vector<ConstCurvSegment> m_segments;
-
-    int m_numConstraints;
-    double constraintInnerRadius;
-    double constraintOuterRadius;
-    std::vector<PointConstraint> m_pointConstraints;
     
     Eigen::Matrix4d m_basePose;
     Eigen::Matrix4d m_tipPose;
