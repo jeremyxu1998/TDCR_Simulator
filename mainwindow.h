@@ -40,8 +40,8 @@ private:
 
     // Tip pose plotting
     QCustomPlot posePlot;
-    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes;
-    QCPGraph *xPlot, *yPlot, *zPlot;
+    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes;
+    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
@@ -52,7 +52,7 @@ private:
 
     BaseController* controller;
     int maxFrameNum;  // Maximum number of frame updates per path planning calculation
-    int frameFreq;  // Frame update frequency;
+    int frameFreq;  // Frame update frequency
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);

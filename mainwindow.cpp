@@ -155,6 +155,7 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
                                 bbLenBox->setValue(boxVal);
                             });
                     bbLenBox->setValue(segLengthUI[robotId](seg) * 1000.0);
+                    bbLenBox->setStyleSheet("background-color: white;");
                 }
                 else {
                     bbLenBox->setEnabled(false);
@@ -362,23 +363,38 @@ void MainWindow::on_constraintAdd_clicked()
 
 void MainWindow::InitPosePlot()
 {
-    posePlot.resize(500, 600);
+    posePlot.resize(1000, 600);
     posePlot.plotLayout()->clear();  // Clear default axis rect and start from scratch
     xPlotAxes = new QCPAxisRect(&posePlot);
     yPlotAxes = new QCPAxisRect(&posePlot);
     zPlotAxes = new QCPAxisRect(&posePlot);
+    rollPlotAxes = new QCPAxisRect(&posePlot);
+    pitchPlotAxes = new QCPAxisRect(&posePlot);
+    yawPlotAxes = new QCPAxisRect(&posePlot);
     posePlot.plotLayout()->addElement(0, 0, xPlotAxes);
     posePlot.plotLayout()->addElement(1, 0, yPlotAxes);
     posePlot.plotLayout()->addElement(2, 0, zPlotAxes);
+    posePlot.plotLayout()->addElement(0, 1, rollPlotAxes);
+    posePlot.plotLayout()->addElement(1, 1, pitchPlotAxes);
+    posePlot.plotLayout()->addElement(2, 1, yawPlotAxes);
     xPlot = posePlot.addGraph(xPlotAxes->axis(QCPAxis::atBottom), xPlotAxes->axis(QCPAxis::atLeft));
-    xPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
-    xPlotAxes->axis(QCPAxis::atLeft)->setLabel("x");
+    xPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    xPlotAxes->axis(QCPAxis::atLeft)->setLabel("x (mm)");
     yPlot = posePlot.addGraph(yPlotAxes->axis(QCPAxis::atBottom), yPlotAxes->axis(QCPAxis::atLeft));
-    yPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
-    yPlotAxes->axis(QCPAxis::atLeft)->setLabel("y");
+    yPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    yPlotAxes->axis(QCPAxis::atLeft)->setLabel("y (mm)");
     zPlot = posePlot.addGraph(zPlotAxes->axis(QCPAxis::atBottom), zPlotAxes->axis(QCPAxis::atLeft));
-    zPlotAxes->axis(QCPAxis::atBottom)->setLabel("t");
-    zPlotAxes->axis(QCPAxis::atLeft)->setLabel("z");
+    zPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    zPlotAxes->axis(QCPAxis::atLeft)->setLabel("z (mm)");
+    rollPlot = posePlot.addGraph(rollPlotAxes->axis(QCPAxis::atBottom), rollPlotAxes->axis(QCPAxis::atLeft));
+    rollPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    rollPlotAxes->axis(QCPAxis::atLeft)->setLabel("roll (deg)");
+    pitchPlot = posePlot.addGraph(pitchPlotAxes->axis(QCPAxis::atBottom), pitchPlotAxes->axis(QCPAxis::atLeft));
+    pitchPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    pitchPlotAxes->axis(QCPAxis::atLeft)->setLabel("pitch (deg)");
+    yawPlot = posePlot.addGraph(yawPlotAxes->axis(QCPAxis::atBottom), yawPlotAxes->axis(QCPAxis::atLeft));
+    yawPlotAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    yawPlotAxes->axis(QCPAxis::atLeft)->setLabel("yaw (deg)");
 }
 
 void MainWindow::DeletePosePlot()
@@ -386,15 +402,26 @@ void MainWindow::DeletePosePlot()
     delete xPlotAxes;
     delete yPlotAxes;
     delete zPlotAxes;
+    delete rollPlotAxes;
+    delete pitchPlotAxes;
+    delete yawPlotAxes;
 }
 
 void MainWindow::UpdatePosePlot(double t, Eigen::Matrix4d pose)
 {
-    xPlot->addData(t, pose(0, 3));
+    xPlot->addData(t, pose(0,3) * 1000.0);
     xPlot->rescaleAxes();
-    yPlot->addData(t, pose(1, 3));
+    yPlot->addData(t, pose(1,3) * 1000.0);
     yPlot->rescaleAxes();
-    zPlot->addData(t, pose(2, 3));
+    zPlot->addData(t, pose(2,3) * 1000.0);
     zPlot->rescaleAxes();
+    Eigen::Matrix3d orientation = pose.topLeftCorner(3,3);
+    Eigen::Vector3d rpy = orientation.eulerAngles(2, 1, 0);  // ZYX Euler angles, equivalent to roll-pitch-yaw
+    rollPlot->addData(t, rpy(0) / M_PI * 180.0);
+    rollPlot->rescaleAxes();
+    pitchPlot->addData(t, rpy(1) / M_PI * 180.0);
+    pitchPlot->rescaleAxes();
+    yawPlot->addData(t, rpy(2) / M_PI * 180.0);
+    yawPlot->rescaleAxes();
     posePlot.replot();
 }

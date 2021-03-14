@@ -44,7 +44,7 @@ private:
         double getDiskThickness();
         double getPhi();
 
-        double getCurTendonLengthChange(int tendCount);
+        Eigen::VectorXd getCurTendonLengthChange();
         double getCurExtLength();
         double getCurSegLength();
         Eigen::Matrix4d & getSegTipPose();
@@ -78,7 +78,7 @@ private:
 
 public:
     int getNumSegment();
-    std::vector<ConstCurvSegment> & getSegments();  // TODO: const
+    std::vector<ConstCurvSegment> & getSegments();
 
 private:
     int m_numSegment;  // j
