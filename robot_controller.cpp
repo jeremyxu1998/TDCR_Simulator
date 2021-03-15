@@ -221,6 +221,18 @@ std::vector<BaseController::PointConstraint> & BaseController::getConstraints()
     return m_pointConstraints;
 }
 
+BaseController::PointConstraint & BaseController::getConstraint(QString constraintLabel)
+{
+    auto iter = std::find_if(m_pointConstraints.begin(), m_pointConstraints.end(),
+                             [&](const BaseController::PointConstraint& p){return p.getLabel() == constraintLabel;});
+
+    return (*iter);
+    // if ( iter != m_pointConstraints.end()) {
+    //     return (*iter);
+    // }
+    // return NULL;
+}
+
 void BaseController::addPointConstraint(QString constraintLabel, Eigen::Vector3d constraintPosition)
 {
     PointConstraint newConstraint(constraintLabel,
@@ -234,11 +246,19 @@ void BaseController::addPointConstraint(QString constraintLabel, Eigen::Vector3d
     return;
 }
 
-void BaseController::deletePointConstraint(QString constraintLabel)
+bool BaseController::deletePointConstraint(QString constraintLabel)
 {
-    int constraintIdx = 1 ; //Find constraint index
-    m_pointConstraints.erase(m_pointConstraints.begin() + constraintIdx);
-    m_numConstraints = m_pointConstraints.size();
+    auto iter = std::find_if(m_pointConstraints.begin(), m_pointConstraints.end(),
+                             [&](const BaseController::PointConstraint& p){return p.getLabel() == constraintLabel;});
+
+    // if found, erase it
+    if ( iter != m_pointConstraints.end()) {
+        m_pointConstraints.erase(iter);
+        m_numConstraints = m_pointConstraints.size();
+
+        return true;
+    }
+    return false;
 }
 
 BaseController::PointConstraint::PointConstraint(
@@ -253,22 +273,22 @@ BaseController::PointConstraint::PointConstraint(
 {
 }
 
-QString BaseController::PointConstraint::getLabel()
+QString BaseController::PointConstraint::getLabel() const
 {
     return m_pointLabel;
 }
 
-Eigen::Vector3d BaseController::PointConstraint::getPosition()
+Eigen::Vector3d BaseController::PointConstraint::getPosition() const
 {
     return m_pointPosition;
 }
 
-double BaseController::PointConstraint::getInnerRadius()
+double BaseController::PointConstraint::getInnerRadius() const
 {
     return m_pointInnerRadius;
 }
 
-double BaseController::PointConstraint::getOuterRadius()
+double BaseController::PointConstraint::getOuterRadius() const
 {
     return m_pointOuterRadius;
 }

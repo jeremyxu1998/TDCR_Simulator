@@ -32,6 +32,11 @@ private slots:
     void on_posePlotCheckBox_stateChanged(int checked);
     void on_calculateButton_clicked();
     void on_constraintAdd_clicked();
+    void on_constraintDel_clicked();
+    void on_constraintList_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+    void on_backboneSlider_valueChanged(int diskValue);
+    void on_innerRadBox_valueChanged(double newinnerRad);
+    void on_outerRadBox_valueChanged(double newOuterRad);
 
 private:
     Ui::MainWindow *ui;

@@ -361,6 +361,81 @@ void MainWindow::on_constraintAdd_clicked()
     return;
 }
 
+void MainWindow::on_constraintDel_clicked()
+{
+    QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+    bool deleted = controller->deletePointConstraint(curConstraint->text());
+
+    if (deleted) {
+        ui->constraintList->removeItemWidget(curConstraint);
+        delete curConstraint;
+    }
+    else {
+        qDebug() << "Constraint was unable to be deleted. Not found in controller";
+    }
+}
+
+void MainWindow::on_constraintList_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    if (!current) {
+        return;
+    }
+
+    QString currentLabel = current->text();
+    if (previous) {
+        QString previousLabel = previous->text();
+    }
+    // Update visualizer constraint colour and previous constraint
+
+    int robotId = currentLabel.split("_")[1].toInt() - 1;
+
+    int numDisks = robots[robotId].GetAllDisksPose().size();
+    ui->backboneSlider->setMaximum(numDisks - 1);
+    // Cannot update slider position because constraint doesn't always stick to slider
+    // Only use slider to snap constraint position to backbone
+
+    // Set spin boxes
+    double innerRad = controller->getConstraint(currentLabel).getInnerRadius();
+    if (innerRad != -1) {
+        ui->innerRadBox->setValue(innerRad * 1000);
+    }
+    else {
+        qDebug() << "Inner radius not changed. Constraint not found";
+    }
+
+    double outerRad = controller->getConstraint(currentLabel).getOuterRadius();
+    if (innerRad != -1) {
+        ui->outerRadBox->setValue(outerRad * 1000);
+    }
+    else {
+        qDebug() << "Outer radius not changed. Constraint not found";
+    }
+}
+
+void MainWindow::on_backboneSlider_valueChanged(int diskValue)
+{
+    QString currentLabel = ui->constraintList->currentItem()->text();
+    int robotId = currentLabel.split("_")[1].toInt() - 1;
+
+    Eigen::Vector3d diskPosition = robots[robotId].GetAllDisksPose()[diskValue].topRightCorner(3,1);
+    controller->getConstraint(currentLabel).updatePosition(diskPosition);
+    return;
+}
+
+void MainWindow::on_innerRadBox_valueChanged(double newInnerRad)
+{
+    QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+    controller->getConstraint(curConstraint->text()).updateInnerRadius(newInnerRad / 1000);
+    return;
+}
+
+void MainWindow::on_outerRadBox_valueChanged(double newOuterRad)
+{
+    QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+    controller->getConstraint(curConstraint->text()).updateOuterRadius(newOuterRad / 1000);
+    return;
+}
+
 void MainWindow::InitPosePlot()
 {
     posePlot.resize(1000, 600);

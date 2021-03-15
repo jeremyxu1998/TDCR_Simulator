@@ -241,7 +241,7 @@ First segment:</string>
        <item>
         <widget class="QLabel" name="constraintLabel">
          <property name="text">
-          <string>Constraint Controls</string>
+          <string>Constraint Control Panel</string>
          </property>
         </widget>
        </item>

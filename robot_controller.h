@@ -22,10 +22,10 @@ private:
                             double initInnerRadius,
                             double initOuterRadius);
             
-            QString getLabel();
-            Eigen::Vector3d getPosition();
-            double getInnerRadius();
-            double getOuterRadius();
+            QString getLabel() const;
+            Eigen::Vector3d getPosition() const;
+            double getInnerRadius() const;
+            double getOuterRadius() const;
 
             void updatePosition(Eigen::Vector3d newPosition);
             void updateInnerRadius(double newRadius);
@@ -42,8 +42,9 @@ private:
 public:
     int getNumConstraints();
     std::vector<PointConstraint> & getConstraints();
+    PointConstraint & getConstraint(QString constraintLabel);
     void addPointConstraint(QString constraintLabel, Eigen::Vector3d constraintPosition);
-    void deletePointConstraint(QString constraintLabel);
+    bool deletePointConstraint(QString constraintLabel);
 
 private:
     int calcFreq, updateFreq;
