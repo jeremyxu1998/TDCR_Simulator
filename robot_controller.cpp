@@ -14,8 +14,8 @@ BaseController::BaseController(int freq)
     posAccuReq = 5e-4;
     oriAccuReq = 0.05;  // rad
 
-    constraintInnerRadius = 5.0;
-    constraintOuterRadius = 10.0;
+    constraintInnerRadius = 2.0;
+    constraintOuterRadius = 5.0;
 }
 
 BaseController::~BaseController()

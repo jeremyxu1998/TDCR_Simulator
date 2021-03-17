@@ -82,6 +82,63 @@ bool VtkVisualizer::UpdateTargetTipPose(const Eigen::Matrix4d & pose)
     return true;
 }
 
+VtkVisualizer::PointConstraintVisual & VtkVisualizer::getConstraintVisual(QString constraintLabel)
+{
+    auto iter = std::find_if(pointsVisual.begin(), pointsVisual.end(),
+                             [&](const VtkVisualizer::PointConstraintVisual& p){return p.getLabel() == constraintLabel;});
+
+    return (*iter);
+}
+
+void VtkVisualizer::addConstraintVisual(QString constraintLabel, Eigen::Vector3d constraintPosition, double constraintRadius)
+{
+    PointConstraintVisual newConstraint(constraintLabel,
+                                        constraintPosition,
+                                        constraintRadius);
+    
+    pointsVisual.emplace_back(newConstraint);
+    numConstraints = pointsVisual.size();
+
+    renderer->AddActor(pointsVisual[numConstraints-1].pointActor);
+    renderWindow->Render();
+}
+
+bool VtkVisualizer::deleteConstraintVisual(QString constraintLabel)
+{
+    auto iter = std::find_if(pointsVisual.begin(), pointsVisual.end(),
+                             [&](const VtkVisualizer::PointConstraintVisual& p){return p.getLabel() == constraintLabel;});
+
+    // if found, erase it
+    if ( iter != pointsVisual.end()) {
+        renderer->RemoveActor((*iter).pointActor);
+        renderWindow->Render();
+
+        pointsVisual.erase(iter);
+        numConstraints = pointsVisual.size();
+
+        return true;
+    }
+    return false;
+}
+
+void VtkVisualizer::updateConstraintPosition(QString constraintLabel, Eigen::Vector3d constraintPosition)
+{
+    getConstraintVisual(constraintLabel).updatePosition(constraintPosition);
+    renderWindow->Render();
+}
+
+void VtkVisualizer::updateConstraintInnerRadius(QString constraintLabel, double constraintRadius)
+{
+    getConstraintVisual(constraintLabel).updateInnerRadius(constraintRadius);
+    renderWindow->Render();
+}
+
+void VtkVisualizer::updateConstraintSelected(QString constraintLabel, bool selected)
+{
+    getConstraintVisual(constraintLabel).updateColor(selected);
+    renderWindow->Render();
+}
+
 VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
 {
     unsigned segmentNum = robot.getSegments().size();
@@ -275,4 +332,54 @@ bool VtkVisualizer::TACRVisual::SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, 
     axes->SetUserTransform(transform);
 
     return true;
+}
+
+VtkVisualizer::PointConstraintVisual::PointConstraintVisual(
+                                            QString initLabel,
+                                            Eigen::Vector3d initPosition,
+                                            double initInnerRadius)
+{
+    pointLabel = initLabel;
+    
+    pointSource = vtkSmartPointer<vtkSphereSource>::New();
+    pointSource->SetCenter(initPosition[0], initPosition[1], initPosition[2]);
+    pointSource->SetRadius(initInnerRadius);
+
+    pointSource->SetPhiResolution(100);
+    pointSource->SetThetaResolution(100);
+
+    pointMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    pointMapper->SetInputConnection(pointSource->GetOutputPort());
+
+    pointActor = vtkSmartPointer<vtkActor>::New();
+    pointActor->SetMapper(pointMapper);
+    pointActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+}
+
+QString VtkVisualizer::PointConstraintVisual::getLabel() const
+{
+    return pointLabel;
+}
+
+void VtkVisualizer::PointConstraintVisual::updatePosition(Eigen::Vector3d newPosition)
+{
+    pointSource->SetCenter(newPosition[0], newPosition[1], newPosition[2]);
+}
+
+void VtkVisualizer::PointConstraintVisual::updateInnerRadius(double newRadius)
+{
+    pointSource->SetRadius(newRadius);
+}
+
+void VtkVisualizer::PointConstraintVisual::updateColor(bool selected)
+{
+    if (!pointActor) {
+        return;
+    }
+    if (selected) {
+        pointActor->GetProperty()->SetColor(0.0, 0.8, 0.0);
+    }
+    else {
+        pointActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+    }
 }

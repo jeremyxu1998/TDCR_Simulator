@@ -16,6 +16,7 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkSmartPointer.h>
 #include <vtkCylinderSource.h>
+#include <vtkSphereSource.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkParametricSpline.h>
 #include <vtkParametricFunctionSource.h>
@@ -74,10 +75,42 @@ private:
         bool SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, const Eigen::Matrix4d & pose);
     };
 
+    class PointConstraintVisual 
+    {
+    public:
+        PointConstraintVisual(  QString initLabel,
+                                Eigen::Vector3d initPosition,
+                                double initInnerRadius);
+
+        vtkSmartPointer<vtkSphereSource> pointSource;
+        vtkSmartPointer<vtkPolyDataMapper> pointMapper;
+        vtkSmartPointer<vtkActor> pointActor;
+
+        QString getLabel() const;
+        void updatePosition(Eigen::Vector3d newPosition);
+        void updateInnerRadius(double newRadius);
+        void updateColor(bool selected);
+
+    private:
+        QString pointLabel;
+
+    };
+
+public:
+    PointConstraintVisual & getConstraintVisual(QString constraintLabel);
+    void addConstraintVisual(QString constraintLabel, Eigen::Vector3d constraintPosition, double constraintRadius);
+    bool deleteConstraintVisual(QString constraintLabel);
+    void updateConstraintPosition(QString constraintLabel, Eigen::Vector3d constraintPosition);
+    void updateConstraintInnerRadius(QString constraintLabel, double constraintRadius);
+    void updateConstraintSelected(QString constraintLabel, bool selected);
+
 private:
     int numRobots;
     std::vector<TACRVisual> robotsVisual;
     vtkSmartPointer<vtkAxesActor> originAxes;
+
+    int numConstraints;
+    std::vector<PointConstraintVisual> pointsVisual;
 };
 
 #endif // VTK_VISUALIZER_H

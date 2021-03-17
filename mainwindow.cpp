@@ -358,17 +358,28 @@ void MainWindow::on_constraintAdd_clicked()
     controller->addPointConstraint(newConstraintLabel, curTipPosition);
 
     // Create sphere in visualizer with set radii at the robot pose tip
+    double innerRad = controller->getConstraint(newConstraintLabel).getInnerRadius();
+
+    visualizer->addConstraintVisual(newConstraintLabel, curTipPosition, innerRad);
+
     return;
 }
 
 void MainWindow::on_constraintDel_clicked()
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
-    bool deleted = controller->deletePointConstraint(curConstraint->text());
+    bool deletedControl = controller->deletePointConstraint(curConstraint->text());
 
-    if (deleted) {
-        ui->constraintList->removeItemWidget(curConstraint);
-        delete curConstraint;
+    if (deletedControl) {
+        bool deletedVisual = visualizer->deleteConstraintVisual(curConstraint->text());
+
+        if (deletedVisual) {
+            ui->constraintList->removeItemWidget(curConstraint);
+            delete curConstraint;
+        }
+        else {
+            qDebug() << "Constraint was deleted in controller, but not visualizer. Not found in visualizer";
+        }
     }
     else {
         qDebug() << "Constraint was unable to be deleted. Not found in controller";
@@ -384,8 +395,10 @@ void MainWindow::on_constraintList_currentItemChanged(QListWidgetItem *current, 
     QString currentLabel = current->text();
     if (previous) {
         QString previousLabel = previous->text();
+        visualizer->updateConstraintSelected(previousLabel, false);
     }
     // Update visualizer constraint colour and previous constraint
+    visualizer->updateConstraintSelected(currentLabel, true);
 
     int robotId = currentLabel.split("_")[1].toInt() - 1;
 
@@ -404,7 +417,7 @@ void MainWindow::on_constraintList_currentItemChanged(QListWidgetItem *current, 
     }
 
     double outerRad = controller->getConstraint(currentLabel).getOuterRadius();
-    if (innerRad != -1) {
+    if (outerRad != -1) {
         ui->outerRadBox->setValue(outerRad * 1000);
     }
     else {
@@ -419,6 +432,7 @@ void MainWindow::on_backboneSlider_valueChanged(int diskValue)
 
     Eigen::Vector3d diskPosition = robots[robotId].GetAllDisksPose()[diskValue].topRightCorner(3,1);
     controller->getConstraint(currentLabel).updatePosition(diskPosition);
+    visualizer->updateConstraintPosition(currentLabel, diskPosition);
     return;
 }
 
@@ -426,6 +440,7 @@ void MainWindow::on_innerRadBox_valueChanged(double newInnerRad)
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
     controller->getConstraint(curConstraint->text()).updateInnerRadius(newInnerRad / 1000);
+    visualizer->updateConstraintInnerRadius(curConstraint->text(), newInnerRad / 1000);
     return;
 }
 
