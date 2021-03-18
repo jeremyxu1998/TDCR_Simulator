@@ -60,12 +60,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     InitPosePlot();
 
-    // Teleoperation widget initialization
+    // Teleoperation widget and algorithm initialization
     teleopWidget = new TeleoperationWidget();
     addDockWidget(Qt::LeftDockWidgetArea, teleopWidget);
     QAction *teAct = teleopWidget->toggleViewAction();
     windowMenu->addAction(teAct);
     tabifyDockWidget(ui->tipPoseDockWidget, teleopWidget);
+    teleopAlgo = new TACRTeleoperation(robots[0], controller, visualizer);
+    TeleopWidgetAlgoConnect(teleopWidget, teleopAlgo);
+    teleopAlgo->CheckInputDevices();
 }
 
 MainWindow::~MainWindow()
@@ -266,6 +269,12 @@ void MainWindow::SwitchRobotInput()
             }
         }
     }
+}
+
+void MainWindow::TeleopWidgetAlgoConnect(TeleoperationWidget *teleopWidget, TACRTeleoperation *teleopAlgo)
+{
+    connect(teleopWidget, SIGNAL(sgn_changeDevice(QString)), teleopAlgo, SLOT(slot_changeDevice(QString)));
+    connect(teleopAlgo, SIGNAL(sgn_addDevice(QString)), teleopWidget, SLOT(slot_addDevice(QString)));
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)

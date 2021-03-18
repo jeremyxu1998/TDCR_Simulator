@@ -58,6 +58,8 @@ private:
     VtkVisualizer* visualizer;
 
     TeleoperationWidget *teleopWidget;
+    TACRTeleoperation *teleopAlgo;
+    void TeleopWidgetAlgoConnect(TeleoperationWidget *teleopWidget, TACRTeleoperation *teleopAlgo);
 
     // Tip pose plotting
     QCustomPlot posePlot;
