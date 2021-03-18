@@ -237,7 +237,7 @@ bool VtkVisualizer::TACRVisual::UpdateRobotVisualization(const std::vector<Eigen
 
 bool VtkVisualizer::TACRVisual::UpdateTargetPose(const Eigen::Matrix4d & pose)
 {
-    SetAxesPose(targetAxes, pose);
+    return SetAxesPose(targetAxes, pose);
 }
 
 bool VtkVisualizer::TACRVisual::SetDiskPose(vtkSmartPointer<vtkActor> actor, const Eigen::Matrix4d & pose)

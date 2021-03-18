@@ -34,6 +34,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    QMenu *windowMenu;
     QButtonGroup robotSelectBtnGroup;
     int selectedRobotId;
 

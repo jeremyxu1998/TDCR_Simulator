@@ -20,6 +20,9 @@ MainWindow::MainWindow(QWidget *parent)
     QCoreApplication::setApplicationName("Tendon Robot Simulator");
     setWindowTitle(QCoreApplication::applicationName());
     installEventFilter(this);  // Overload eventFilter to capture enter key
+    windowMenu = ui->menubar->addMenu("Window");
+    QAction *tpAct = ui->tipPoseDockWidget->toggleViewAction();
+    windowMenu->addAction(tpAct);
 
     // Robot initialization
     QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../robot_configurations/", tr("XML files (*.xml)"));
@@ -53,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
         allDisksPose.emplace_back(robots[i].GetAllDisksPose());
     }
     visualizer->UpdateVisualization(allDisksPose);
-    ui->mainSplitter->addWidget(visualizer->getWidget());
+    ui->centralwidget->layout()->addWidget(visualizer->getWidget());
 
     InitPosePlot();
 }
@@ -126,7 +129,7 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
             ui->robot_3_Radio->setEnabled(false);
         }
         QString radioBtnName = "robot_" + QString::number(robotId + 1) + "_Radio";
-        QRadioButton* radioBtn = ui->verticalLayoutWidget->findChild<QRadioButton*>(radioBtnName);
+        QRadioButton* radioBtn = ui->tipPoseDockWidget->findChild<QRadioButton*>(radioBtnName);
         if (radioBtn != nullptr) {
             radioBtn->setEnabled(true);
             robotSelectBtnGroup.addButton(radioBtn, robotId + 1);
@@ -135,8 +138,8 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
         for (int seg = 0; seg < 3; seg++) {
             QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
             QString bbSliderName = "segLenSlider_" + QString::number(seg + 1);
-            QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
-            QSlider* bbLenSlider = ui->verticalLayoutWidget->findChild<QSlider *>(bbSliderName);
+            QDoubleSpinBox* bbLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+            QSlider* bbLenSlider = ui->tipPoseDockWidget->findChild<QSlider *>(bbSliderName);
             if (bbLenBox != nullptr && bbLenSlider != nullptr) {
                 if (seg < segNum) {
                     auto curSeg = robot.getSegments()[seg];
@@ -164,7 +167,7 @@ void MainWindow::InitializeRobotConfig(TendonRobot & robot, int robotId)
 
             for (int tend = 0; tend < 4; tend++) {
                 QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
-                QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+                QDoubleSpinBox* tenLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(tenBoxName);
                 if (tenLenBox != nullptr) {
                     if (seg < segNum && tend < tenNum) {
                         connect(tenLenBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
@@ -195,7 +198,7 @@ void MainWindow::UpdateSingleTendon(int seg, int tend, double newLenChg, QDouble
     if (tend != lastTenIndex && numMod == tendonLengthChangeMod[selectedRobotId].cols() - 1) {
         double autoLastLenChg = -(tendonLengthChangeUI[selectedRobotId].row(seg).sum() - tendonLengthChangeUI[selectedRobotId](seg, lastTenIndex));
         QString lastBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(lastTenIndex + 1);
-        QDoubleSpinBox* lastLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(lastBoxName);
+        QDoubleSpinBox* lastLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(lastBoxName);
         if (lastLenBox != nullptr) {
             lastLenBox->setValue(autoLastLenChg * 1000.0);
         }
@@ -211,8 +214,8 @@ void MainWindow::SwitchRobotInput()
     for (int seg = 0; seg < 3; seg++) {
         QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
         QString bbSliderName = "segLenSlider_" + QString::number(seg + 1);
-        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
-        QSlider* bbLenSlider = ui->verticalLayoutWidget->findChild<QSlider *>(bbSliderName);
+        QDoubleSpinBox* bbLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        QSlider* bbLenSlider = ui->tipPoseDockWidget->findChild<QSlider *>(bbSliderName);
         if (bbLenBox != nullptr && bbLenSlider != nullptr) {
             if (seg < segNum) {
                 bbLenBox->setEnabled(true);
@@ -236,7 +239,7 @@ void MainWindow::SwitchRobotInput()
 
         for (int tend = 0; tend < 4; tend++) {
             QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
-            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            QDoubleSpinBox* tenLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(tenBoxName);
             if (tenLenBox != nullptr) {
                 if (seg < segNum && tend < tenNum) {
                     tenLenBox->setEnabled(true);
@@ -330,12 +333,12 @@ void MainWindow::on_calculateButton_clicked()
     int numSegment = tendonLengthChangeUI[0].rows();
     for (int seg = 0; seg < numSegment; seg++) {
         QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
-        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        QDoubleSpinBox* bbLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(bbBoxName);
         bbLenBox->setStyleSheet("background-color: white;");
         for (int tend = 0; tend < tendonLengthChangeUI[0].cols(); tend++) {
             tendonLengthChangeMod[0](seg, tend) = 0;
             QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
-            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            QDoubleSpinBox* tenLenBox = ui->tipPoseDockWidget->findChild<QDoubleSpinBox *>(tenBoxName);
             tenLenBox->setStyleSheet("background-color: white;");
         }
     }
