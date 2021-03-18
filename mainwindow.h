@@ -7,6 +7,7 @@
 #include "tendon_robot.h"
 #include "robot_controller.h"
 #include "vtk_visualizer.h"
+#include "teleoperation.h"
 #include "lib/qcustomplot.h"
 
 #include <QSplitter>
@@ -35,32 +36,33 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QMenu *windowMenu;
-    QButtonGroup robotSelectBtnGroup;
-    int selectedRobotId;
-
-    // Tip pose plotting
-    QCustomPlot posePlot;
-    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes;
-    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot;
 
     std::vector<TendonRobot> robots;
+    QButtonGroup robotSelectBtnGroup;
+    int selectedRobotId;
     std::vector<Eigen::VectorXd> segLengthUI;
     std::vector<Eigen::VectorXd> segLengthOld;  // Record previous backbone length for animation
     std::vector<Eigen::MatrixXd> tendonLengthChangeUI;
     std::vector<Eigen::MatrixXd> tendonLengthChangeOld;  // Record previous tendon length change for animation
     std::vector<Eigen::MatrixXi> tendonLengthChangeMod;  // Record if each value is modified
 
-    BaseController* controller;
-    int maxFrameNum;  // Maximum number of frame updates per path planning calculation
-    int frameFreq;  // Frame update frequency
-    VtkVisualizer* visualizer;
-
     bool ReadFromXMLFile(QString const& fileName);
     void InitializeRobotConfig(TendonRobot & robot, int robotId);
     void UpdateSingleTendon(int seg, int tend, double newLenChg, QDoubleSpinBox* tenLenBox);
     void SwitchRobotInput();  // When clicking radio button, reset input GUI to stored value of that robot
 
+    BaseController* controller;
+    int maxFrameNum;  // Maximum number of frame updates per path planning calculation
+    int frameFreq;  // Frame update frequency
+
+    VtkVisualizer* visualizer;
+
+    TeleoperationWidget *teleopWidget;
+
     // Tip pose plotting
+    QCustomPlot posePlot;
+    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes;
+    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot;
     void InitPosePlot();
     void DeletePosePlot();
     void UpdatePosePlot(double t, Eigen::Matrix4d pose);

@@ -23,6 +23,7 @@ SOURCES += \
     mainwindow.cpp \
     lib/qcustomplot.cpp \
     robot_controller.cpp \
+    teleoperation.cpp \
     tendon_robot.cpp \
     vtk_visualizer.cpp
 
@@ -32,11 +33,13 @@ HEADERS += \
     mainwindow.h \
     lib/qcustomplot.h \
     robot_controller.h \
+    teleoperation.h \
     tendon_robot.h \
     vtk_visualizer.h
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    teleoperation.ui
 
 # Link against VTK
 INCLUDEPATH += /usr/local/include/vtk-8.2

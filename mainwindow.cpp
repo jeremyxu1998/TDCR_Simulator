@@ -59,6 +59,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->centralwidget->layout()->addWidget(visualizer->getWidget());
 
     InitPosePlot();
+
+    // Teleoperation widget initialization
+    teleopWidget = new TeleoperationWidget();
+    addDockWidget(Qt::LeftDockWidgetArea, teleopWidget);
+    QAction *teAct = teleopWidget->toggleViewAction();
+    windowMenu->addAction(teAct);
+    tabifyDockWidget(ui->tipPoseDockWidget, teleopWidget);
 }
 
 MainWindow::~MainWindow()
