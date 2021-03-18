@@ -303,7 +303,7 @@ void MainWindow::on_calculateButton_clicked()
     for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
         // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
         // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
-        bool reachTarget = controller->PathPlanningUpdate(robots[0], tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
+        bool reachTarget = controller->PathPlanningUpdate(robots[0], targetTipPose, tendonLengthFrame, segLengthFrame);
         allDisksPose.clear();
         robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());

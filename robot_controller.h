@@ -10,7 +10,7 @@ public:
     BaseController(int freq);
     ~BaseController();
 
-    bool PathPlanningUpdate(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+    bool PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix4d & T_target,
                         Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength);
 
 private:

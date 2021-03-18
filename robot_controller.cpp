@@ -19,19 +19,20 @@ BaseController::~BaseController()
 {
 }
 
-bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix4d & T_target,
                                     Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength)
 {
     Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
-    Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
     Eigen::Matrix3d R_target = T_target.topLeftCorner(3,3);
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
 
-    Eigen::Matrix4d T_cur = T_init;
-    Eigen::VectorXd q_cur(targetTendonLengthChange.size());
-    int numTendon = targetTendonLengthChange.cols();
+    int numTendon = robot.getSegments()[0].getTendonNum();
+    int numSegment = robot.getNumSegment();
+    int numDOF = numTendon * numSegment;
+
+    Eigen::VectorXd q_cur(numDOF);
     int qCount = 0;
-    for (int j = 0; j < robot.getNumSegment(); j++) {  // Pack segment parameter matrices to q
+    for (int j = 0; j < numSegment; j++) {  // Pack segment parameter matrices to q
         Eigen::VectorXd initTendonLengthChange = robot.getSegments()[j].getCurTendonLengthChange();
         for (int i = 0; i < numTendon - 1; i++) {
             q_cur(qCount) = initTendonLengthChange(i);
@@ -40,19 +41,17 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
         q_cur(qCount) = robot.getSegments()[j].getCurExtLength();
         qCount++;
     }
-    int numDOF = q_cur.size();
 
     bool reachTarget = false;
+    Eigen::Matrix4d T_cur = T_init;
     Eigen::MatrixXd J_body = Eigen::MatrixXd::Zero(6,numDOF);  // Body Jacobian
-    Eigen::MatrixXd curTendonLengthChange(targetTendonLengthChange.rows(), targetTendonLengthChange.cols());
-    Eigen::VectorXd curSegLength(targetSegLength.size());
+    Eigen::MatrixXd curTendonLengthChange(numSegment, numTendon);
+    Eigen::VectorXd curSegLength(numSegment);
     UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
-    assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
-    assert(curSegLength.size() == targetSegLength.size());
 
     Eigen::VectorXd PGain(numDOF);
     qCount = 0;
-    for (int j = 0; j < robot.getNumSegment(); j++) {
+    for (int j = 0; j < numSegment; j++) {
         for (int i = 0; i < numTendon - 1; i++) {
             PGain(qCount) = PGainTendon;
             qCount++;
@@ -92,7 +91,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
         Eigen::MatrixXd weightMat = jointLimitWeight * Eigen::MatrixXd::Identity(numDOF, numDOF);  // Damping for JTJ matrix inverse close to singularity
         Eigen::VectorXd negGradCostJointLimit = Eigen::VectorXd::Zero(numDOF);  // v: cost function for joint limit task
         // Segment length joint limit, analytical gradient
-        for (int j = 0; j < robot.getNumSegment(); j++) {
+        for (int j = 0; j < numSegment; j++) {
             double segMinLength = robot.getSegments()[j].getMinSegLength();
             double segMaxLength = robot.getSegments()[j].getMinSegLength() + robot.getSegments()[j].getMaxExtSegLength();
             double segCurLength = curSegLength[j];
@@ -101,7 +100,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
             negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * taskWeightSegLen * gradCostSingleJointLimit;
         }
         // Segment curvature joint limit, numerical gradient
-        for (int j = 0; j < robot.getNumSegment(); j++) {
+        for (int j = 0; j < numSegment; j++) {
             Eigen::VectorXd segCurTendonLengthChange = curTendonLengthChange.row(j);
             double curCurvature = robot.getSegments()[j].CalcCurvature(segCurTendonLengthChange, curSegLength[j]);
             double maxCurvature = robot.getSegments()[j].CalcMaxCurvature(curSegLength[j]);
