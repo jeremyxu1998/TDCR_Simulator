@@ -3,6 +3,8 @@
 
 #include <QDockWidget>
 #include <QList>
+#include <QTimer>
+#include <QTest>
 
 #include "devices/inputdevice.h"
 #include "devices/GeomagicTouch/geomagictouchinput.h"
@@ -23,6 +25,7 @@ public:
 
 signals:
     void sgn_changeDevice(QString);
+    void sgn_StartStop(bool);
 
 public slots:
     void slot_addDevice(QString s);
@@ -34,6 +37,7 @@ private slots:
 
 private:
     Ui::TeleoperationWidget *ui;
+    bool m_loopingWidget;
 };
 
 
@@ -43,6 +47,7 @@ class TACRTeleoperation : public QObject
 
 public:
     TACRTeleoperation(TendonRobot & r, BaseController *controller, VtkVisualizer *visualizer);
+    ~TACRTeleoperation();
     void CheckInputDevices();
 
 signals:
@@ -52,7 +57,7 @@ signals:
 public slots:
     void slot_deviceConnectionStatus(bool b_connected, QString s);
     void slot_changeDevice(QString s);
-    void slot_Start();
+    void slot_StartStop(bool start);
     // void slot_Stop();
     // void slot_Reset();
     void slot_clutchIn();
@@ -77,7 +82,7 @@ private:
     Eigen::VectorXd segLengthFrame;
     std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // Outmost vector for multiple robots (legacy reason)
 
-    void MainLoop();
+    Q_INVOKABLE void MainLoop();
 };
 
 #endif // TELEOPERATION_H

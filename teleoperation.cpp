@@ -8,6 +8,7 @@ TeleoperationWidget::TeleoperationWidget(QWidget *parent) :
     ui(new Ui::TeleoperationWidget)
 {
     ui->setupUi(this);
+    m_loopingWidget = false;
 }
 
 TeleoperationWidget::~TeleoperationWidget()
@@ -34,7 +35,19 @@ void TeleoperationWidget::on_scaleSpinBox_valueChanged(double arg1)
 
 void TeleoperationWidget::on_startButton_clicked()
 {
-
+    if (!m_loopingWidget) {  // Start
+        m_loopingWidget = true;
+        ui->inputDevComboBox->setEnabled(false);
+        ui->scaleSpinBox->setEnabled(false);
+        ui->startButton->setText("Stop");
+    }
+    else {  // Stop
+        m_loopingWidget = false;
+        ui->inputDevComboBox->setEnabled(true);
+        ui->scaleSpinBox->setEnabled(true);
+        ui->startButton->setText("Start");
+    }
+    emit sgn_StartStop(m_loopingWidget);
 }
 
 
@@ -44,6 +57,15 @@ TACRTeleoperation::TACRTeleoperation(TendonRobot &r, BaseController *controller,
     pController = controller;
     pVisualizer = visualizer;
     pInputDevice = nullptr;
+    m_looping = false;
+    m_enabled = false;
+}
+
+TACRTeleoperation::~TACRTeleoperation()
+{
+    for (int i = 0; i < m_inputDeviceList.size(); i++) {
+        delete m_inputDeviceList.at(i);
+    }
 }
 
 void TACRTeleoperation::slot_deviceConnectionStatus(bool b_connected, QString s)
@@ -58,6 +80,8 @@ void TACRTeleoperation::slot_changeDevice(QString s)
 {
     // Disconnect previous device
     if (pInputDevice != nullptr) {
+        disconnect(pInputDevice, SIGNAL(sgn_clutchIn()), this, SLOT(slot_clutchIn()));
+        disconnect(pInputDevice, SIGNAL(sgn_clutchOut()), this, SLOT(slot_clutchOut()));
     }
 
     for (int i = 0; i < m_inputDeviceList.size(); i++) {
@@ -67,21 +91,36 @@ void TACRTeleoperation::slot_changeDevice(QString s)
             break;
         }
     }
+
+    connect(pInputDevice, SIGNAL(sgn_clutchIn()), this, SLOT(slot_clutchIn()));
+    connect(pInputDevice, SIGNAL(sgn_clutchOut()), this, SLOT(slot_clutchOut()));
 }
 
-void TACRTeleoperation::slot_Start()
+void TACRTeleoperation::slot_StartStop(bool start)
 {
-
+    if (start) {
+        m_looping = true;
+        m_enabled = false;
+        qDebug() << "Starting Teleoperation";
+        QMetaObject::invokeMethod(this, "MainLoop");
+    }
+    else {  // Stop
+        m_looping = false;
+        m_enabled = false;
+        qDebug() << "Stop Teleoperation";
+    }
 }
 
 void TACRTeleoperation::slot_clutchIn()
 {
-
+    m_enabled = true;
+    qDebug() << "Clutch in";
 }
 
 void TACRTeleoperation::slot_clutchOut()
 {
-
+    m_enabled = false;
+    qDebug() << "Clutch out";
 }
 
 void TACRTeleoperation::CheckInputDevices()
@@ -91,6 +130,9 @@ void TACRTeleoperation::CheckInputDevices()
             this, SLOT(slot_deviceConnectionStatus(bool, QString)));
     if (m_devicePhantom->initializeDevice()) {
         m_inputDeviceList.append(m_devicePhantom);
+        pInputDevice = m_devicePhantom;
+        connect(pInputDevice, SIGNAL(sgn_clutchIn()), this, SLOT(slot_clutchIn()));
+        connect(pInputDevice, SIGNAL(sgn_clutchOut()), this, SLOT(slot_clutchOut()));
     }
     else {
         disconnect(m_devicePhantom, SIGNAL(sgn_connectedStatus(bool, QString)),
@@ -102,7 +144,9 @@ void TACRTeleoperation::CheckInputDevices()
 void TACRTeleoperation::MainLoop()
 {
     while (m_looping) {
+        qDebug() << "In main loop:";
         if (pInputDevice != nullptr && m_enabled) {
+            qDebug() << "Motion:";
             curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
             // robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
             // targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
@@ -114,5 +158,6 @@ void TACRTeleoperation::MainLoop()
             // pVisualizer->UpdateVisualization(allDisksPose);
             // QCoreApplication::processEvents();  // Notify Qt to update the widget
         }
+        QTest::qWait(5000);
     }
 }

@@ -275,6 +275,7 @@ void MainWindow::TeleopWidgetAlgoConnect(TeleoperationWidget *teleopWidget, TACR
 {
     connect(teleopWidget, SIGNAL(sgn_changeDevice(QString)), teleopAlgo, SLOT(slot_changeDevice(QString)));
     connect(teleopAlgo, SIGNAL(sgn_addDevice(QString)), teleopWidget, SLOT(slot_addDevice(QString)));
+    connect(teleopWidget, SIGNAL(sgn_StartStop(bool)), teleopAlgo, SLOT(slot_StartStop(bool)));
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
