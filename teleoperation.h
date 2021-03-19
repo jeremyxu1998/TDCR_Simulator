@@ -53,6 +53,7 @@ public:
 signals:
     void sgn_addDevice(QString);
     void sgn_error_received(int);
+    void sgn_startTeleoperateToDev(bool);  // trigger input device once to turn m_isTeleoperated true
 
 public slots:
     void slot_deviceConnectionStatus(bool b_connected, QString s);

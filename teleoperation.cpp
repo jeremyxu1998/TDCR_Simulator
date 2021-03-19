@@ -131,8 +131,10 @@ void TACRTeleoperation::CheckInputDevices()
     if (m_devicePhantom->initializeDevice()) {
         m_inputDeviceList.append(m_devicePhantom);
         pInputDevice = m_devicePhantom;
+        connect(this, SIGNAL(sgn_startTeleoperateToDev(bool)), pInputDevice, SLOT(slot_onTeleoperate(bool)));
         connect(pInputDevice, SIGNAL(sgn_clutchIn()), this, SLOT(slot_clutchIn()));
         connect(pInputDevice, SIGNAL(sgn_clutchOut()), this, SLOT(slot_clutchOut()));
+        emit sgn_startTeleoperateToDev(true);
     }
     else {
         disconnect(m_devicePhantom, SIGNAL(sgn_connectedStatus(bool, QString)),
@@ -144,10 +146,12 @@ void TACRTeleoperation::CheckInputDevices()
 void TACRTeleoperation::MainLoop()
 {
     while (m_looping) {
-        qDebug() << "In main loop:";
         if (pInputDevice != nullptr && m_enabled) {
             qDebug() << "Motion:";
             curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
+            std::stringstream ss;
+            ss << curMasterFrame;
+            qDebug() << QString::fromStdString(ss.str());
             // robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
             // targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
             // // m_controller->PathPlanningUpdate(m_robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
@@ -158,6 +162,6 @@ void TACRTeleoperation::MainLoop()
             // pVisualizer->UpdateVisualization(allDisksPose);
             // QCoreApplication::processEvents();  // Notify Qt to update the widget
         }
-        QTest::qWait(5000);
+        QTest::qWait(3000);
     }
 }
