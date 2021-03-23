@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     windowMenu->addAction(tpAct);
 
     // Robot initialization
-    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../robot_configurations/", tr("XML files (*.xml)"));
+    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../../robot_configurations/", tr("XML files (*.xml)"));
     if (xmlDir.isEmpty()) {
         QMessageBox::critical(this, "Error", "Robot config file load failed: Invalid input directory. Please restart program.");
         return;
@@ -55,8 +55,9 @@ MainWindow::MainWindow(QWidget *parent)
     for (int i = 0; i < robots.size(); i++) {
         allDisksPose.emplace_back(robots[i].GetAllDisksPose());
     }
-    visualizer->UpdateVisualization(allDisksPose);
     ui->centralwidget->layout()->addWidget(visualizer->getWidget());
+    visualizer->UpdateVisualization(allDisksPose);
+    QCoreApplication::processEvents();  // Notify Qt to update the widget
 
     InitPosePlot();
 
@@ -66,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *teAct = teleopWidget->toggleViewAction();
     windowMenu->addAction(teAct);
     tabifyDockWidget(ui->tipPoseDockWidget, teleopWidget);
-    teleopAlgo = new TACRTeleoperation(robots[0], controller, visualizer);
+    teleopAlgo = new TACRTeleoperation(robots[0], visualizer);
     TeleopWidgetAlgoConnect(teleopWidget, teleopAlgo);
     teleopAlgo->CheckInputDevices();
 }

@@ -3,7 +3,7 @@
 
 #include <QDockWidget>
 #include <QList>
-#include <QTimer>
+#include <QElapsedTimer>
 #include <QTest>
 
 #include "devices/inputdevice.h"
@@ -46,7 +46,7 @@ class TACRTeleoperation : public QObject
     Q_OBJECT
 
 public:
-    TACRTeleoperation(TendonRobot & r, BaseController *controller, VtkVisualizer *visualizer);
+    TACRTeleoperation(TendonRobot & r, VtkVisualizer *visualizer);
     ~TACRTeleoperation();
     void CheckInputDevices();
 
@@ -59,7 +59,6 @@ public slots:
     void slot_deviceConnectionStatus(bool b_connected, QString s);
     void slot_changeDevice(QString s);
     void slot_StartStop(bool start);
-    // void slot_Stop();
     // void slot_Reset();
     void slot_clutchIn();
     void slot_clutchOut();
@@ -72,6 +71,7 @@ private:
     double m_scaling;
     bool m_looping;  // Main loop, controlled by start/stop button on UI
     bool m_enabled;  // Clutch in/out. controlled by input device
+    int m_frameFreq;  // Frame update frequency
 
     InputDevice *pInputDevice;
     QList<InputDevice*> m_inputDeviceList;
@@ -81,7 +81,7 @@ private:
     Eigen::Matrix4d prevRobotFrameGlobal, robotFrameDelta, targetRobotFrameGlobal;
     Eigen::MatrixXd tendonLengthFrame;  // Output robot config
     Eigen::VectorXd segLengthFrame;
-    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // Outmost vector for multiple robots (legacy reason)
+    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // Outermost vector for multiple robots (legacy reason), not used
 
     Q_INVOKABLE void MainLoop();
 };

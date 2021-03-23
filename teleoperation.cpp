@@ -51,14 +51,18 @@ void TeleoperationWidget::on_startButton_clicked()
 }
 
 
-TACRTeleoperation::TACRTeleoperation(TendonRobot &r, BaseController *controller, VtkVisualizer *visualizer)
+TACRTeleoperation::TACRTeleoperation(TendonRobot &r, VtkVisualizer *visualizer)
 {
     robot = r;
-    pController = controller;
     pVisualizer = visualizer;
     pInputDevice = nullptr;
     m_looping = false;
     m_enabled = false;
+    m_scaling = 0.5;
+    m_frameFreq = 10;
+    pController = new BaseController(m_frameFreq);
+    prevMasterFrame = Eigen::Matrix4d::Identity();
+    curMasterFrame = Eigen::Matrix4d::Identity();
 }
 
 TACRTeleoperation::~TACRTeleoperation()
@@ -66,6 +70,7 @@ TACRTeleoperation::~TACRTeleoperation()
     for (int i = 0; i < m_inputDeviceList.size(); i++) {
         delete m_inputDeviceList.at(i);
     }
+    delete pController;
 }
 
 void TACRTeleoperation::slot_deviceConnectionStatus(bool b_connected, QString s)
@@ -114,6 +119,8 @@ void TACRTeleoperation::slot_StartStop(bool start)
 void TACRTeleoperation::slot_clutchIn()
 {
     m_enabled = true;
+    prevMasterFrame = Eigen::Matrix4d::Identity();
+    curMasterFrame = Eigen::Matrix4d::Identity();
     qDebug() << "Clutch in";
 }
 
@@ -145,23 +152,39 @@ void TACRTeleoperation::CheckInputDevices()
 
 void TACRTeleoperation::MainLoop()
 {
+    int iterTimeLength = 1000 / m_frameFreq;
     while (m_looping) {
+        QElapsedTimer timer;
+        timer.start();
         if (pInputDevice != nullptr && m_enabled) {
             qDebug() << "Motion:";
             curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
+            prevRobotFrameGlobal = robot.GetTipPose();
+            // std::stringstream ss;
+            // ss << curMasterFrame;
+            // qDebug() << QString::fromStdString(ss.str());
+            robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
+            robotFrameDelta.topRightCorner(3,1) *= m_scaling;  // TODO: rotation scaling option
             std::stringstream ss;
-            ss << curMasterFrame;
+            ss << robotFrameDelta;
             qDebug() << QString::fromStdString(ss.str());
-            // robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
-            // targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
-            // // m_controller->PathPlanningUpdate(m_robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
+            targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
+            bool reachTarget = pController->PathPlanningUpdate(robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
+            if (reachTarget)
+                qDebug() << "reach position";
+            else
+                qDebug() << "not reach position";
 
-            // allDisksPose.clear();
-            // robot.SetTendonLength(tendonLengthFrame, segLengthFrame);
-            // allDisksPose.emplace_back(robot.GetAllDisksPose());
-            // pVisualizer->UpdateVisualization(allDisksPose);
-            // QCoreApplication::processEvents();  // Notify Qt to update the widget
+            allDisksPose.clear();
+            robot.SetTendonLength(tendonLengthFrame, segLengthFrame);
+            allDisksPose.emplace_back(robot.GetAllDisksPose());
+            pVisualizer->UpdateVisualization(allDisksPose);
+            QCoreApplication::processEvents();  // Notify Qt to update the widget
+
+            prevMasterFrame = curMasterFrame;
         }
-        QTest::qWait(3000);
+        int iterProcTime = timer.elapsed();
+        qDebug() << "Iteration processed in " << iterProcTime << " msec";
+        QTest::qWait(std::max(iterTimeLength - iterProcTime, 0));
     }
 }
