@@ -22,6 +22,7 @@ public:
     bool SetTendonLength(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
     // Simple version of SetTendonLength(), NOT update robot geometry
     Eigen::Matrix4d CalcTipPose(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
+    std::vector<Eigen::Matrix4d> CalcAllDisksPose(const Eigen::MatrixXd & robotTendonLengthChange, const Eigen::VectorXd & robotSegLength);
 
 private:
     class ConstCurvSegment
@@ -52,7 +53,7 @@ private:
 
         bool ForwardKinematics(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
         // Simple version of FK(), calculate and return tip pose only and does NOT update robot geometry
-        Eigen::Matrix4d ForwardKinematicsSimple(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
+        std::vector<Eigen::Matrix4d> ForwardKinematicsSimple(const Eigen::VectorXd & tendonLengthChange, const double curSegLength);
         double CalcCurvature(const Eigen::VectorXd & q, const double l);  // Robot dependent mapping only
         double CalcMaxCurvature(const double l);  // Max curvature given current length l
     private:

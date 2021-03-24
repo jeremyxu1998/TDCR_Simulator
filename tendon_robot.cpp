@@ -186,7 +186,7 @@ Eigen::Matrix4d TendonRobot::CalcTipPose(const Eigen::MatrixXd &robotTendonLengt
     Eigen::Matrix4d tipPose = Eigen::Matrix4d::Identity();
     for (int j = 0; j < m_numSegment; j++) {
         Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
-        tipPose *= m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]);
+        tipPose *= m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]).back();
         // Add the disk thickness offset between segments
         if (j != m_numSegment - 1) {
             double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
@@ -197,6 +197,39 @@ Eigen::Matrix4d TendonRobot::CalcTipPose(const Eigen::MatrixXd &robotTendonLengt
         }
     }
     return tipPose;
+}
+
+std::vector<Eigen::Matrix4d> TendonRobot::CalcAllDisksPose(const Eigen::MatrixXd &robotTendonLengthChange, const Eigen::VectorXd &robotSegLength)
+{
+    std::vector<Eigen::Matrix4d> allDisksPose;
+    // Input size check
+    if (robotTendonLengthChange.rows() != m_numSegment || robotSegLength.rows() != m_numSegment) {
+        allDisksPose.push_back(Eigen::Matrix4d::Identity());
+        return allDisksPose;
+    }
+
+    Eigen::Matrix4d curBasePose = m_basePose;
+    for (int j = 0; j < m_numSegment; j++) {
+        Eigen::VectorXd segTendonLengthChange = robotTendonLengthChange.row(j);
+        std::vector<Eigen::Matrix4d> curSegPoses = m_segments[j].ForwardKinematicsSimple(segTendonLengthChange, robotSegLength[j]);
+
+        for (int diskCount = 0; diskCount < curSegPoses.size(); diskCount++) {
+            curSegPoses[diskCount] = curBasePose * curSegPoses[diskCount];
+        }
+        allDisksPose.reserve(allDisksPose.size() + std::distance(curSegPoses.begin(), curSegPoses.end()));
+        allDisksPose.insert(allDisksPose.end(), curSegPoses.begin(), curSegPoses.end());
+        curBasePose = curSegPoses.back();
+
+        // Add the disk thickness offset between segments
+        if (j != m_numSegment - 1) {
+            double thicknessOffset = 0.5 * m_segments[j].getDiskThickness() + 0.5 * m_segments[j+1].getDiskThickness();
+            Eigen::Vector3d offsetRel;
+            offsetRel << 0, 0, thicknessOffset;
+            Eigen::Vector3d offsetWorld = curBasePose.topLeftCorner(3,3) * offsetRel;
+            curBasePose.block(0, 3, 3, 1) += offsetWorld;
+        }
+    }
+    return allDisksPose;
 }
 
 int TendonRobot::getNumSegment()
@@ -393,14 +426,16 @@ bool TendonRobot::ConstCurvSegment::ForwardKinematics(const Eigen::VectorXd & te
     return true;
 }
 
-Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eigen::VectorXd &tendonLengthChange, const double curSegLength)
+std::vector<Eigen::Matrix4d> TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eigen::VectorXd &tendonLengthChange, const double curSegLength)
 {
+    std::vector<Eigen::Matrix4d> allDisksPose;
     Eigen::VectorXd q;
     if (tendonLengthChange.rows() == m_numTendon) {
         q = tendonLengthChange;
     }
     else {
-        return Eigen::Matrix4d::Identity();
+        allDisksPose.push_back(Eigen::Matrix4d::Identity());
+        return allDisksPose;
     }
 
     bool zeroInputCase = true;
@@ -413,9 +448,14 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
         }
     }
 
-    Eigen::Matrix4d segTipPose = Eigen::Matrix4d::Identity();
     if (zeroInputCase) {
-        segTipPose(2,3) = curSegLength;
+        double disk_arc = curSegLength / static_cast<double>(m_numDisk-1);
+        for (int disk_count = 0; disk_count < m_numDisk; disk_count++) {
+            double s = disk_count * disk_arc;
+            Eigen::Matrix4d curDiskPose = Eigen::Matrix4d::Identity();
+            curDiskPose(2,3) = s;
+            allDisksPose.push_back(curDiskPose);
+        }
     }
     else {
         /* Robot dependent mapping: tendon length --> k,phi,l */
@@ -426,27 +466,39 @@ Eigen::Matrix4d TendonRobot::ConstCurvSegment::ForwardKinematicsSimple(const Eig
 
         /* Robot independent mapping: k,phi,l --> T */
         double phiCcw = -phi;  // Twist angle is defined CW, however tendon sequence (and coordinate) is CCW
-        Eigen::Matrix4d rotPhiTrans;
-        rotPhiTrans << cos(phiCcw), -sin(phiCcw), 0, 0,
-                       sin(phiCcw), cos(phiCcw), 0, 0,
-                       0, 0, 1, 0,
-                       0, 0, 0, 1;
-        Eigen::Matrix4d bendTrans;
-        double theta = curvature * curSegLength;
-        bendTrans << cos(theta), 0, sin(theta), (1/curvature) * (1 - cos(theta)),
-                     0, 1, 0, 0,
-                     -sin(theta), 0, cos(theta), (1/curvature) * sin(theta),
-                     0, 0, 0, 1;
-        Eigen::Matrix4d rotBackPhiTrans;
-        rotBackPhiTrans << cos(-phiCcw), -sin(-phiCcw), 0, 0,
-                           sin(-phiCcw), cos(-phiCcw), 0, 0,
-                           0, 0, 1, 0,
-                           0, 0, 0, 1;
+        double disk_arc = curSegLength / static_cast<double>(m_numDisk-1);
+        for (int disk_count = 0; disk_count < m_numDisk; disk_count++) {
+            if (disk_count == 0) {
+                allDisksPose.push_back(Eigen::Matrix4d::Identity());
+                continue;
+            }
+            double s = disk_count * disk_arc;
 
-        segTipPose = rotPhiTrans * bendTrans * rotBackPhiTrans;
+            Eigen::Matrix4d rotPhiTrans;
+            rotPhiTrans << cos(phiCcw), -sin(phiCcw), 0, 0,
+                        sin(phiCcw), cos(phiCcw), 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1;
+
+            Eigen::Matrix4d bendTrans;
+            double theta = curvature * s;
+            bendTrans << cos(theta), 0, sin(theta), (1/curvature) * (1 - cos(theta)),
+                        0, 1, 0, 0,
+                        -sin(theta), 0, cos(theta), (1/curvature) * sin(theta),
+                        0, 0, 0, 1;
+
+            Eigen::Matrix4d rotBackPhiTrans;
+            rotBackPhiTrans << cos(-phiCcw), -sin(-phiCcw), 0, 0,
+                            sin(-phiCcw), cos(-phiCcw), 0, 0,
+                            0, 0, 1, 0,
+                            0, 0, 0, 1;
+
+            Eigen::Matrix4d curDiskPose = rotPhiTrans * bendTrans * rotBackPhiTrans;
+            allDisksPose.push_back(curDiskPose);
+        }
     }
 
-    return segTipPose;
+    return allDisksPose;
 }
 
 double TendonRobot::ConstCurvSegment::CalcCurvature(const Eigen::VectorXd & q, const double l)

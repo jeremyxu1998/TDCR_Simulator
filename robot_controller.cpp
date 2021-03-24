@@ -9,6 +9,7 @@ BaseController::BaseController(int freq)
     stepSize = 1e-7;
     taskWeightSegLen = 0.01;
     taskWeightCurv = 0.5;
+    taskWeightConstraint = 0.4;
     PGainTendon = 2;
     PGainBbone = 12;
     posAccuReq = 5e-4;
@@ -22,10 +23,11 @@ BaseController::~BaseController()
 {
 }
 
-bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
                                     Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength)
 {
-    Eigen::Matrix4d T_init = robot.GetTipPose();  // Initial transformation
+    std::vector<Eigen::Matrix4d> curDisksPose = robot.GetAllDisksPose();
+    Eigen::Matrix4d T_init = curDisksPose.back();  // Initial transformation
     Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
     Eigen::Matrix3d R_target = T_target.topLeftCorner(3,3);
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
@@ -66,7 +68,15 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
 
     int maxSteps = calcFreq / updateFreq;
     for (int step = 0; step < maxSteps; step++) {
-        // Estimate Jacobian
+
+        // Constraint setup
+        Eigen::VectorXd negConstraintGrad = Eigen::VectorXd::Zero(numDOF);
+        double curConstraintCost = 0;
+        if (!m_pointConstraints.empty()) {
+            curConstraintCost = calcConstraintsCost(robotId, curDisksPose);
+        }
+
+        // Finite Differences Calculations
         for (int i = 0; i < numDOF; i++) {  // Note: "i" here is NOT tendon count, but DOF count
             Eigen::MatrixXd curTendonLengthChange_i = curTendonLengthChange;
             Eigen::VectorXd curSegLength_i = curSegLength;
@@ -78,13 +88,23 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
             else {
                 curTendonLengthChange_i(row, col) += qEpsilon;
             }
-            Eigen::Matrix4d T_cur_i = robot.CalcTipPose(curTendonLengthChange_i, curSegLength_i);
 
+            // Forward kinematics simulation
+            std::vector<Eigen::Matrix4d> curDisksPose_i = robot.CalcAllDisksPose(curTendonLengthChange_i, curSegLength_i);
+            Eigen::Matrix4d T_cur_i = curDisksPose_i.back();
+
+            // Jacobian Estimation
             Eigen::Matrix4d J_bi_skew = T_cur.inverse() * (T_cur_i - T_cur) / qEpsilon;  // Better to use matrix log, but precise enough here
             Eigen::VectorXd J_bi(6);
             J_bi << J_bi_skew(2,1), J_bi_skew(0,2), J_bi_skew(1,0),  // omega components
                     J_bi_skew(0,3), J_bi_skew(1,3), J_bi_skew(2,3);  // v components
             J_body.col(i) = J_bi;
+
+            // Constraint Cost Calculation
+            if (!m_pointConstraints.empty()) {
+                double constraintCost_i = calcConstraintsCost(robotId, curDisksPose_i);
+                negConstraintGrad(i) = -(constraintCost_i - curConstraintCost) / qEpsilon; // add bounds for numerical stability
+            }
         }
 
         /* Damped Left Pseudo Inverse with Joint Limit
@@ -127,6 +147,8 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
             double costDerivative = (numerCurvatureCost - curCurvatureCost) / qEpsilon;
             negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * taskWeightCurv * costDerivative;
         }
+
+        Eigen::VectorXd negGradCost = negGradCostJointLimit + taskWeightConstraint * negConstraintGrad;
         
         Eigen::Matrix4d T_body_desired = T_cur.inverse() * T_target;
         double theta;
@@ -137,10 +159,12 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix
         twist *= theta;  // S is normalized, multiply by theta to get twist
 
         // Optimial solution equation for multi-task control
-        Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCostJointLimit);
+        Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCost);
         q_cur = q_cur + q_dot.cwiseProduct(PGain) * (1.0 / static_cast<double>(calcFreq));
+
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
-        T_cur = robot.CalcTipPose(curTendonLengthChange, curSegLength);
+        curDisksPose = robot.CalcAllDisksPose(curTendonLengthChange, curSegLength);
+        T_cur = curDisksPose.back();
 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
         Eigen::Matrix3d rotDiff = T_cur.topLeftCorner(3,3).transpose() * R_target;
@@ -207,6 +231,39 @@ void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)
         long valScaled = static_cast<long>(vals[i] * multiplier);
         vals[i] = static_cast<double>(valScaled) * precision;
     }
+}
+
+double BaseController::calcConstraintsCost(int robotId, std::vector<Eigen::Matrix4d> & curDisksPose)
+{
+    double totalConstraintsCost = 0;
+    for (int j = 0; j < m_pointConstraints.size(); j++) {
+
+        PointConstraint curConstraint = m_pointConstraints[j];
+        double adjustedCost = 0;
+
+        if (robotId == (curConstraint.getLabel().split("_")[1].toInt() - 1)) {        
+            // Find minimal cost for current constraint
+            double minDist = std::numeric_limits<double>::infinity();
+            for (int i = 0; i < curDisksPose.size(); i++) {
+                Eigen::Vector3d diskPosition_i = curDisksPose[i].topRightCorner(3, 1);
+                minDist = std::min(minDist, (curConstraint.getPosition() - diskPosition_i).norm());
+            }
+
+            // Compute radial cost affects
+            if (minDist > curConstraint.getInnerRadius()) {
+                double innerEpsilon = curConstraint.getInnerRadius();
+                double outerEpsilon = curConstraint.getOuterRadius();
+                adjustedCost = pow(minDist - innerEpsilon, 2) / (2 * (outerEpsilon - innerEpsilon));
+            }
+            else {
+                adjustedCost = 0;
+            }
+        }
+
+        totalConstraintsCost += adjustedCost;
+    }
+
+    return totalConstraintsCost;
 }
 
 // Constraints
