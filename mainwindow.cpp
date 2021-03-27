@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     maxFrameNum = 1000;
     frameFreq = 100;
     controller = new BaseController(frameFreq);
+    ui->scenarioList->setCurrentRow(0);
 
     // Visualizer initialization
     visualizer = new VtkVisualizer(robots);
@@ -288,6 +289,69 @@ void MainWindow::on_posePlotCheckBox_stateChanged(int checked)
 
 void MainWindow::on_calculateButton_clicked()
 {
+    // Only supports single robot
+    for (int i = 0; i < robots[0].getNumSegment(); i++) {
+        if (tendonLengthChangeUI[0].row(i).sum() > 1e-9) {
+            QMessageBox::warning(this, "Warning", "Please re-enter a valid configuration");
+            return;
+        }
+    }
+
+    // TODO: animation speed based on tendon contraction speed?
+    int frame_num = 50;
+
+    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose; // For multiple robots (legacy reason)
+
+    Eigen::MatrixXd tendonLengthDelta = (tendonLengthChangeUI[0] - tendonLengthChangeOld[0]) / static_cast<double>(frame_num);
+    Eigen::VectorXd segLengthDelta = (segLengthUI[0] - segLengthOld[0]) / static_cast<double>(frame_num);
+
+    Eigen::MatrixXd tendonLengthFrame = tendonLengthChangeOld[0];
+    Eigen::VectorXd segLengthFrame = segLengthOld[0];
+
+    ui->progressBar->setValue(0);
+
+    for (int frame_count = 0; frame_count < frame_num; frame_count++) {
+        
+        tendonLengthFrame += tendonLengthDelta;
+        segLengthFrame += segLengthDelta;
+
+        robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
+        allDisksPose.clear();
+        allDisksPose.emplace_back(robots[0].GetAllDisksPose());
+        // std::cout << allDisksPose[0][allDisksPose[0].size()-1] << std::endl;
+
+        visualizer->UpdateVisualization(allDisksPose);
+        ui->progressBar->setValue((int) 100 * frame_count / frame_num);
+        QCoreApplication::processEvents();  // Notify Qt to update the widget
+        std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    }
+
+    ui->progressBar->setValue(100);
+
+    tendonLengthChangeOld = tendonLengthChangeUI;
+    segLengthOld = segLengthUI;
+
+    // Reset last tendon auto-update, and spinbox mod in UI
+    // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {
+    int numSegment = tendonLengthChangeUI[0].rows();
+    for (int seg = 0; seg < numSegment; seg++) {
+        QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
+        QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        bbLenBox->setStyleSheet("background-color: white;");
+        for (int tend = 0; tend < tendonLengthChangeUI[0].cols(); tend++) {
+            tendonLengthChangeMod[0](seg, tend) = 0;
+            QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
+            QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            tenLenBox->setStyleSheet("background-color: white;");
+        }
+    }
+    // }
+
+    return;
+}
+
+void MainWindow::on_controlButton_clicked()
+{
     Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
     Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
     visualizer->UpdateTargetTipPose(targetTipPose);
@@ -296,21 +360,26 @@ void MainWindow::on_calculateButton_clicked()
     yPlot->data()->clear();
     zPlot->data()->clear();
     UpdatePosePlot(0.0, initialTipPose);
+    ui->progressBar->setValue(0);
 
     Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
     Eigen::VectorXd segLengthFrame;
     std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
+    int robotId = 0;
+    bool useConstr = ui->constraintCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
+    bool useFullPose = ui->fullPoseCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
 
     for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
         // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
         // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
-        bool reachTarget = controller->PathPlanningUpdate(robots[0], 0, tendonLengthChangeUI[0], segLengthUI[0], tendonLengthFrame, segLengthFrame);
+        bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
         allDisksPose.clear();
         robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
         allDisksPose.emplace_back(robots[0].GetAllDisksPose());
         // }
         Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
         visualizer->UpdateVisualization(allDisksPose);
+        ui->progressBar->setValue((int) 100 * frameCount / maxFrameNum);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
         double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
         UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
@@ -322,6 +391,8 @@ void MainWindow::on_calculateButton_clicked()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
     }
+
+    ui->progressBar->setValue(100);
 
     tendonLengthChangeOld = tendonLengthChangeUI;
     segLengthOld = segLengthUI;
@@ -378,7 +449,7 @@ void MainWindow::on_constraintDel_clicked()
             delete curConstraint;
         }
         else {
-            qDebug() << "Constraint was deleted in controller, but not visualizer. Not found in visualizer";
+            qDebug() << "Constraint was deleted in controller, but not in visualizer. Not found in visualizer";
         }
     }
     else {

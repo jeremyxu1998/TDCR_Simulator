@@ -23,20 +23,20 @@ BaseController::~BaseController()
 {
 }
 
-bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, const Eigen::Matrix4d & T_target,
                                     Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength)
 {
     std::vector<Eigen::Matrix4d> curDisksPose = robot.GetAllDisksPose();
     Eigen::Matrix4d T_init = curDisksPose.back();  // Initial transformation
-    Eigen::Matrix4d T_target = robot.CalcTipPose(targetTendonLengthChange, targetSegLength);  // Target transformation
     Eigen::Matrix3d R_target = T_target.topLeftCorner(3,3);
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
 
     Eigen::Matrix4d T_cur = T_init;
-    Eigen::VectorXd q_cur(targetTendonLengthChange.size());
-    int numTendon = targetTendonLengthChange.cols();
+    int numSeg = robot.getNumSegment();
+    int numTendon = robot.getSegments()[0].getTendonNum();
+    Eigen::VectorXd q_cur(numSeg * numTendon);
     int qCount = 0;
-    for (int j = 0; j < robot.getNumSegment(); j++) {  // Pack segment parameter matrices to q
+    for (int j = 0; j < numSeg; j++) {  // Pack segment parameter matrices to q
         Eigen::VectorXd initTendonLengthChange = robot.getSegments()[j].getCurTendonLengthChange();
         for (int i = 0; i < numTendon - 1; i++) {
             q_cur(qCount) = initTendonLengthChange(i);
@@ -47,13 +47,18 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
     }
     int numDOF = q_cur.size();
 
+    int jacobianDim = 3;
+    if (useFullPoseControl) {
+        jacobianDim = 6;
+    }
+
     bool reachTarget = false;
-    Eigen::MatrixXd J_body = Eigen::MatrixXd::Zero(6,numDOF);  // Body Jacobian
-    Eigen::MatrixXd curTendonLengthChange(targetTendonLengthChange.rows(), targetTendonLengthChange.cols());
-    Eigen::VectorXd curSegLength(targetSegLength.size());
+    Eigen::MatrixXd J_body = Eigen::MatrixXd::Zero(jacobianDim, numDOF);  // Body Jacobian
+    Eigen::MatrixXd curTendonLengthChange(numSeg, numTendon);
+    Eigen::VectorXd curSegLength(numSeg);
     UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
-    assert(curTendonLengthChange.size() == targetTendonLengthChange.size());
-    assert(curSegLength.size() == targetSegLength.size());
+    assert(curTendonLengthChange.size() == numSeg * numTendon);
+    assert(curSegLength.size() == numSeg);
 
     Eigen::VectorXd PGain(numDOF);
     qCount = 0;
@@ -72,7 +77,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
         // Constraint setup
         Eigen::VectorXd negConstraintGrad = Eigen::VectorXd::Zero(numDOF);
         double curConstraintCost = 0;
-        if (!m_pointConstraints.empty()) {
+        if (!m_pointConstraints.empty() && useConstraints) {
             curConstraintCost = calcConstraintsCost(robotId, curDisksPose);
         }
 
@@ -80,14 +85,10 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
         for (int i = 0; i < numDOF; i++) {  // Note: "i" here is NOT tendon count, but DOF count
             Eigen::MatrixXd curTendonLengthChange_i = curTendonLengthChange;
             Eigen::VectorXd curSegLength_i = curSegLength;
-            int row = i / numTendon;  // which segment
-            int col = i % numTendon;  // which DOF in that segment
-            if (col == numTendon - 1) {
-                curSegLength_i(row) += qEpsilon;
-            }
-            else {
-                curTendonLengthChange_i(row, col) += qEpsilon;
-            }
+            Eigen::VectorXd q_cur_i = q_cur;
+
+            q_cur_i(i) += qEpsilon;
+            UnpackRobotConfig(robot, numTendon, q_cur_i, curTendonLengthChange_i, curSegLength_i);
 
             // Forward kinematics simulation
             std::vector<Eigen::Matrix4d> curDisksPose_i = robot.CalcAllDisksPose(curTendonLengthChange_i, curSegLength_i);
@@ -98,10 +99,10 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
             Eigen::VectorXd J_bi(6);
             J_bi << J_bi_skew(2,1), J_bi_skew(0,2), J_bi_skew(1,0),  // omega components
                     J_bi_skew(0,3), J_bi_skew(1,3), J_bi_skew(2,3);  // v components
-            J_body.col(i) = J_bi;
+            J_body.col(i) = J_bi.tail(jacobianDim);
 
             // Constraint Cost Calculation
-            if (!m_pointConstraints.empty()) {
+            if (!m_pointConstraints.empty() && useConstraints) {
                 double constraintCost_i = calcConstraintsCost(robotId, curDisksPose_i);
                 negConstraintGrad(i) = -(constraintCost_i - curConstraintCost) / qEpsilon; // add bounds for numerical stability
             }
@@ -157,6 +158,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
         twist << S_skew(2,1), S_skew(0,2), S_skew(1,0),  // omega components
                  S_skew(0,3), S_skew(1,3), S_skew(2,3);  // v components
         twist *= theta;  // S is normalized, multiply by theta to get twist
+        twist = twist.tail(jacobianDim);
 
         // Optimial solution equation for multi-task control
         Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCost);
@@ -169,9 +171,17 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, const 
         Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
         Eigen::Matrix3d rotDiff = T_cur.topLeftCorner(3,3).transpose() * R_target;
         double angleDiff = acos(std::max(std::min((rotDiff.trace() - 1) / 2.0, 1.0), -1.0));
-        if ((p_target - p_cur).norm() < posAccuReq && angleDiff < oriAccuReq) {
-            reachTarget = true;
-            break;
+        if (useFullPoseControl) {
+            if ((p_target - p_cur).norm() < posAccuReq && angleDiff < oriAccuReq) {
+                reachTarget = true;
+                break;
+            }
+        }
+        else {
+            if ((p_target - p_cur).norm() < posAccuReq) {
+                reachTarget = true;
+                break;
+            }
         }
     }
     framesTendonLengthChange = curTendonLengthChange;

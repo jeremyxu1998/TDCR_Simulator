@@ -219,9 +219,27 @@ First segment:</string>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="calculateButton">
-          <property name="text">
-           <string>Calculate</string>
+         <layout class="QHBoxLayout" name="updateLayout">
+          <item>
+           <widget class="QPushButton" name="calculateButton">
+            <property name="text">
+             <string>Calculate</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="controlButton">
+            <property name="text">
+             <string>Control</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar">
+          <property name="value">
+           <number>0</number>
           </property>
          </widget>
         </item>
@@ -231,10 +249,22 @@ First segment:</string>
     </item>
     <item>
      <widget class="QWidget" name="constraintWidget" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="minimumSize">
        <size>
         <width>256</width>
         <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
        </size>
       </property>
       <layout class="QVBoxLayout" name="constraintLayout">
@@ -260,7 +290,7 @@ First segment:</string>
         </widget>
        </item>
        <item>
-        <widget class="Line" name="divLine">
+        <widget class="Line" name="constraintDivLine">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -339,7 +369,7 @@ First segment:</string>
        <item>
         <widget class="QLabel" name="innerRadiusLabel">
          <property name="text">
-          <string>Raduis of Influence (Inner)</string>
+          <string>Radius of Influence (Inner)</string>
          </property>
         </widget>
        </item>
@@ -396,6 +426,110 @@ First segment:</string>
           </size>
          </property>
         </spacer>
+       </item>
+       <item>
+        <widget class="Line" name="controlDivline">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>10</height>
+          </size>
+         </property>
+         <property name="lineWidth">
+          <number>10</number>
+         </property>
+         <property name="midLineWidth">
+          <number>10</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="controlLabel">
+         <property name="text">
+          <string>Controller Options</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="fullPoseCheckBox">
+         <property name="text">
+          <string>Full Pose Control</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="constraintCheckBox">
+         <property name="text">
+          <string>Use Constraints</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="scenarioLabel">
+         <property name="text">
+          <string>Scenario Selection</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="scenarioList">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>128</height>
+          </size>
+         </property>
+         <item>
+          <property name="text">
+           <string>update configuration (default)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>loop_1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>deploy_1</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="showScenarioButton">
+         <property name="text">
+          <string>Show Scenario</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

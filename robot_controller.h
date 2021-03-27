@@ -4,6 +4,7 @@
 #include "tendon_robot.h"
 #include <Eigen/Dense>
 #include <limits>
+#include <QDebug>
 
 class BaseController
 {
@@ -11,7 +12,7 @@ public:
     BaseController(int freq);
     ~BaseController();
 
-    bool PathPlanningUpdate(TendonRobot & robot, int robotId, const Eigen::MatrixXd & targetTendonLengthChange, const Eigen::VectorXd & targetSegLength,
+    bool PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, const Eigen::Matrix4d & T_target,
                         Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength);
 
 private:
