@@ -353,7 +353,7 @@ VtkVisualizer::PointConstraintVisual::PointConstraintVisual(
 
     pointActor = vtkSmartPointer<vtkActor>::New();
     pointActor->SetMapper(pointMapper);
-    pointActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+    pointActor->GetProperty()->SetColor(0.0, 0.6, 0.0);
 }
 
 QString VtkVisualizer::PointConstraintVisual::getLabel() const
@@ -377,9 +377,9 @@ void VtkVisualizer::PointConstraintVisual::updateColor(bool selected)
         return;
     }
     if (selected) {
-        pointActor->GetProperty()->SetColor(0.0, 0.8, 0.0);
+        pointActor->GetProperty()->SetColor(0.0, 1.0, 0.0);
     }
     else {
-        pointActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+        pointActor->GetProperty()->SetColor(0.0, 0.6, 0.0);
     }
 }

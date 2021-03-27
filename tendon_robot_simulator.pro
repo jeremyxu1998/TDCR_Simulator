@@ -22,14 +22,16 @@ SOURCES += \
     lib/qcustomplot.cpp \
     robot_controller.cpp \
     tendon_robot.cpp \
-    vtk_visualizer.cpp
+    vtk_visualizer.cpp \
+    scenario_loader.cpp
 
 HEADERS += \
     mainwindow.h \
     lib/qcustomplot.h \
     robot_controller.h \
     tendon_robot.h \
-    vtk_visualizer.h
+    vtk_visualizer.h \
+    scenario_loader.h
 
 FORMS += \
     mainwindow.ui
