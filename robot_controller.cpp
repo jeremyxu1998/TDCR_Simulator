@@ -9,9 +9,9 @@ BaseController::BaseController(int freq)
     stepSize = 1e-7;
     taskWeightSegLen = 0.01;
     taskWeightCurv = 0.5;
-    taskWeightConstraint = 0.4;
-    PGainTendon = 2;
-    PGainBbone = 12;
+    taskWeightConstraint = 0.2;
+    PGainTendon = 6;
+    PGainBbone = 8;
     posAccuReq = 5e-4;
     oriAccuReq = 0.05;  // rad
 

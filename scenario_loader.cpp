@@ -46,7 +46,7 @@ void ScenarioLoader::loop_1(std::vector<Eigen::Matrix4d> & pathPts, std::vector<
     double height = 0; // radius/8;
     int count = 0;
 
-    double tilt = M_PI/2;
+    double tilt = 0;
     Eigen::Matrix4d tilt_matrix;
     tilt_matrix << std::cos(tilt), 0, std::sin(tilt), 0,
                     0, 1, 0, 0,
