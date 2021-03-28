@@ -61,6 +61,7 @@ private:
     Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);
     void UnpackRobotConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur,
                             Eigen::MatrixXd & curTendonLengthChange, Eigen::VectorXd & curSegLength);  // Unpack q to segment parameter matrices
+    Eigen::VectorXd BalanceTendonConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur);
     void RoundValues(Eigen::VectorXd & vals, double precision);
 
     double calcConstraintsCost(int robotId, std::vector<Eigen::Matrix4d> & curDisksPose);

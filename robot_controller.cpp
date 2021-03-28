@@ -34,11 +34,11 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
     Eigen::Matrix4d T_cur = T_init;
     int numSeg = robot.getNumSegment();
     int numTendon = robot.getSegments()[0].getTendonNum();
-    Eigen::VectorXd q_cur(numSeg * numTendon);
+    Eigen::VectorXd q_cur(numSeg * (numTendon + 1));
     int qCount = 0;
     for (int j = 0; j < numSeg; j++) {  // Pack segment parameter matrices to q
         Eigen::VectorXd initTendonLengthChange = robot.getSegments()[j].getCurTendonLengthChange();
-        for (int i = 0; i < numTendon - 1; i++) {
+        for (int i = 0; i < numTendon; i++) {
             q_cur(qCount) = initTendonLengthChange(i);
             qCount++;
         }
@@ -63,7 +63,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
     Eigen::VectorXd PGain(numDOF);
     qCount = 0;
     for (int j = 0; j < robot.getNumSegment(); j++) {
-        for (int i = 0; i < numTendon - 1; i++) {
+        for (int i = 0; i < numTendon; i++) {
             PGain(qCount) = PGainTendon;
             qCount++;
         }
@@ -122,7 +122,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
             double segCurLength = curSegLength[j];
             double gradCostSingleJointLimit = (segMaxLength - segMinLength) * (2 * segCurLength - segMaxLength - segMinLength) /
                                                 (pow(segMaxLength - segCurLength, 2) * pow(segCurLength - segMinLength, 2));
-            negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * taskWeightSegLen * gradCostSingleJointLimit;
+            negGradCostJointLimit((j + 1) * (numTendon + 1) - 1) -= stepSize * taskWeightSegLen * gradCostSingleJointLimit;
         }
         // Segment curvature joint limit, numerical gradient
         for (int j = 0; j < robot.getNumSegment(); j++) {
@@ -131,14 +131,14 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
             double maxCurvature = robot.getSegments()[j].CalcMaxCurvature(curSegLength[j]);
             double curCurvatureCost = maxCurvature / (maxCurvature - curCurvature);
             // Calculate new costs WRT each DOF change
-            for (int i = 0; i < numTendon - 1; i++) {
+            for (int i = 0; i < numTendon; i++) {
                 // WRT tendon length change
                 Eigen::VectorXd segNumerTendonLengthChange = segCurTendonLengthChange;
                 segNumerTendonLengthChange(i) += qEpsilon;
                 double numerCurvature = robot.getSegments()[j].CalcCurvature(segNumerTendonLengthChange, curSegLength[j]);
                 double numerCurvatureCost = maxCurvature / (maxCurvature - numerCurvature);
                 double costDerivative = (numerCurvatureCost - curCurvatureCost) / qEpsilon;
-                negGradCostJointLimit(j * numTendon + i) -= stepSize * taskWeightCurv * costDerivative;
+                negGradCostJointLimit(j * (numTendon + 1) + i) -= stepSize * taskWeightCurv * costDerivative;
             }
             // WRT segment length change
             double numerSegLength = curSegLength[j] + qEpsilon;
@@ -146,7 +146,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
             double numerMaxCurvature = robot.getSegments()[j].CalcMaxCurvature(numerSegLength);
             double numerCurvatureCost = numerMaxCurvature / (numerMaxCurvature - numerCurvature);
             double costDerivative = (numerCurvatureCost - curCurvatureCost) / qEpsilon;
-            negGradCostJointLimit(j * numTendon + numTendon - 1) -= stepSize * taskWeightCurv * costDerivative;
+            negGradCostJointLimit((j + 1) * (numTendon + 1) - 1) -= stepSize * taskWeightCurv * costDerivative;
         }
 
         Eigen::VectorXd negGradCost = negGradCostJointLimit + taskWeightConstraint * negConstraintGrad;
@@ -163,6 +163,7 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
         // Optimial solution equation for multi-task control
         Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCost);
         q_cur = q_cur + q_dot.cwiseProduct(PGain) * (1.0 / static_cast<double>(calcFreq));
+        q_cur = BalanceTendonConfig(robot, numTendon, q_cur);
 
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
         curDisksPose = robot.CalcAllDisksPose(curTendonLengthChange, curSegLength);
@@ -223,15 +224,37 @@ void BaseController::UnpackRobotConfig(TendonRobot & robot, int numTendon, const
     int qCount = 0;
     for (int j = 0; j < robot.getNumSegment(); j++) {
         double tendonDelta = 0.0;
-        for (int i = 0; i < numTendon - 1; i++) {
+        for (int i = 0; i < numTendon; i++) {
             curTendonLengthChange(j, i) = q_cur(qCount);
-            tendonDelta += q_cur(qCount);
+            // tendonDelta += q_cur(qCount);
             qCount++;
         }
-        curTendonLengthChange(j, numTendon - 1) = (-tendonDelta);
+        // curTendonLengthChange(j, numTendon - 1) = (-tendonDelta);
         curSegLength(j) = (q_cur(qCount) + robot.getSegments()[j].getMinSegLength());
         qCount++;
     }
+}
+
+Eigen::VectorXd BaseController::BalanceTendonConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur)
+{
+    if (q_cur.size() != (numTendon + 1) * robot.getNumSegment()) {
+        Eigen::VectorXd q_balanced = q_cur;
+        return q_balanced;
+    }
+    Eigen::VectorXd q_balanced(q_cur.size());
+
+    int qCount = 0;
+    for (int j = 0; j < robot.getNumSegment(); j++) {
+        Eigen::VectorXd q_tendon = q_cur.segment(qCount, numTendon);
+        double tend_avg = q_tendon.sum() / numTendon;
+        for (int i = 0; i < numTendon; i++) {
+            q_balanced(qCount) = q_cur(qCount) + tend_avg;
+            qCount++;
+        }
+        q_balanced(qCount) = q_cur(qCount);
+        qCount++;
+    }
+    return q_balanced;
 }
 
 void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)

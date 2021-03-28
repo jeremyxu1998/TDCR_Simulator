@@ -421,6 +421,7 @@ void MainWindow::on_controlButton_clicked()
             allDisksPose.emplace_back(robots[0].GetAllDisksPose());
             // }
             Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+            std::cout << tendonLengthFrame << std::endl;
             visualizer->UpdateVisualization(allDisksPose);
             ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
 
