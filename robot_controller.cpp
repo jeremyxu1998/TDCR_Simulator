@@ -248,7 +248,7 @@ Eigen::VectorXd BaseController::BalanceTendonConfig(TendonRobot & robot, int num
         Eigen::VectorXd q_tendon = q_cur.segment(qCount, numTendon);
         double tend_avg = q_tendon.sum() / numTendon;
         for (int i = 0; i < numTendon; i++) {
-            q_balanced(qCount) = q_cur(qCount) + tend_avg;
+            q_balanced(qCount) = q_cur(qCount) - tend_avg;
             qCount++;
         }
         q_balanced(qCount) = q_cur(qCount);
