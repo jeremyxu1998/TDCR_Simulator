@@ -6,6 +6,7 @@
 
 #include "tendon_robot.h"
 #include "robot_controller.h"
+#include "scenario_loader.h"
 #include "vtk_visualizer.h"
 #include "lib/qcustomplot.h"
 
@@ -39,6 +40,10 @@ private slots:
     void on_innerRadBox_valueChanged(double newinnerRad);
     void on_outerRadBox_valueChanged(double newOuterRad);
 
+    void on_showScenarioButton_clicked();
+
+    void on_hideScenarioButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QButtonGroup robotSelectBtnGroup;
@@ -59,6 +64,7 @@ private:
     BaseController* controller;
     int maxFrameNum;  // Maximum number of frame updates per path planning calculation
     int frameFreq;  // Frame update frequency
+    ScenarioLoader* scenarioLoader;
     VtkVisualizer* visualizer;
 
     bool ReadFromXMLFile(QString const& fileName);

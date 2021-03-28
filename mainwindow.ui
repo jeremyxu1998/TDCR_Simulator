@@ -531,6 +531,13 @@ First segment:</string>
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="hideScenarioButton">
+         <property name="text">
+          <string>Hide Scenario</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>

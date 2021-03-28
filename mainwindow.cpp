@@ -46,6 +46,10 @@ MainWindow::MainWindow(QWidget *parent)
     maxFrameNum = 1000;
     frameFreq = 100;
     controller = new BaseController(frameFreq);
+
+    // Scenario initialization
+    scenarioLoader = new ScenarioLoader();
+    scenarioLoader->loadScenarios();
     ui->scenarioList->setCurrentRow(0);
 
     // Visualizer initialization
@@ -65,6 +69,7 @@ MainWindow::~MainWindow()
     delete ui;
     delete controller;
     delete visualizer;
+    delete scenarioLoader;
     DeletePosePlot();
 }
 
@@ -352,48 +357,89 @@ void MainWindow::on_calculateButton_clicked()
 
 void MainWindow::on_controlButton_clicked()
 {
+    int robotId = 0;
+    bool useConstr = ui->constraintCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
+    bool useFullPose = ui->fullPoseCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
+    Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
+    Eigen::VectorXd segLengthFrame;
+    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
+    ui->progressBar->setValue(0);
+    
     Eigen::Matrix4d initialTipPose = robots[0].CalcTipPose(tendonLengthChangeOld[0], segLengthOld[0]);
-    Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
-    visualizer->UpdateTargetTipPose(targetTipPose);
 
     xPlot->data()->clear();
     yPlot->data()->clear();
     zPlot->data()->clear();
     UpdatePosePlot(0.0, initialTipPose);
-    ui->progressBar->setValue(0);
 
-    Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
-    Eigen::VectorXd segLengthFrame;
-    std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
-    int robotId = 0;
-    bool useConstr = ui->constraintCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
-    bool useFullPose = ui->fullPoseCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
+    QString currentScenario = ui->scenarioList->currentItem()->text();
 
-    for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
-        // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
-        // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
-        bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
-        allDisksPose.clear();
-        robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
-        allDisksPose.emplace_back(robots[0].GetAllDisksPose());
-        // }
-        Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
-        visualizer->UpdateVisualization(allDisksPose);
-        ui->progressBar->setValue((int) 100 * frameCount / maxFrameNum);
-        QCoreApplication::processEvents();  // Notify Qt to update the widget
-        double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
-        UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
+    if (currentScenario == "update configuration (default)") {
+        Eigen::Matrix4d targetTipPose = robots[0].CalcTipPose(tendonLengthChangeUI[0], segLengthUI[0]);
+        visualizer->UpdateTargetTipPose(targetTipPose);
 
-        if (reachTarget)
-            break;
-        else if (frameCount == maxFrameNum - 1)
-            QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
+        for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
+            // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
+            // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
+            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
+            allDisksPose.clear();
+            robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
+            allDisksPose.emplace_back(robots[0].GetAllDisksPose());
+            // }
+            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+            visualizer->UpdateVisualization(allDisksPose);
+            ui->progressBar->setValue((int) 100 * frameCount / maxFrameNum);
+            QCoreApplication::processEvents();  // Notify Qt to update the widget
+            double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
+            UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
+            if (reachTarget)
+                break;
+            else if (frameCount == maxFrameNum - 1)
+                QMessageBox::warning(this, "Warning", "Path planning failed to reach target pose.");
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
+        }
+    }
+    else {
+        std::vector<Eigen::Matrix4d> pathPts = scenarioLoader->getScenario(currentScenario).getPathPts();
+        for (int i = 0; i < pathPts.size(); i++) {
+            pathPts[i].topRightCorner(3, 1) += initialTipPose.topRightCorner(3, 1);
+        }
+        std::vector<bool> dropConstraint = scenarioLoader->getScenario(currentScenario).dropConstraint();
+        bool showConstraints = false;
+
+        visualizer->showPath(pathPts, dropConstraint, showConstraints);
+
+        for (int frameCount = 0; frameCount < pathPts.size(); frameCount++) {
+            Eigen::Matrix4d targetTipPose = pathPts[frameCount];
+
+            // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
+            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
+            allDisksPose.clear();
+            robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
+            allDisksPose.emplace_back(robots[0].GetAllDisksPose());
+            // }
+            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+            visualizer->UpdateVisualization(allDisksPose);
+            ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
+
+            if (dropConstraint[frameCount]) {
+                on_constraintAdd_clicked();
+            }
+
+            QCoreApplication::processEvents();  // Notify Qt to update the widget
+            double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
+            UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
+        }
     }
 
     ui->progressBar->setValue(100);
 
+    tendonLengthChangeUI[0] = tendonLengthFrame;
+    segLengthUI[0] = segLengthFrame;
     tendonLengthChangeOld = tendonLengthChangeUI;
     segLengthOld = segLengthUI;
 
@@ -403,11 +449,13 @@ void MainWindow::on_controlButton_clicked()
     for (int seg = 0; seg < numSegment; seg++) {
         QString bbBoxName = "segLenBox_" + QString::number(seg + 1);
         QDoubleSpinBox* bbLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(bbBoxName);
+        bbLenBox->setValue(segLengthUI[0](seg) * 1000.0);
         bbLenBox->setStyleSheet("background-color: white;");
         for (int tend = 0; tend < tendonLengthChangeUI[0].cols(); tend++) {
             tendonLengthChangeMod[0](seg, tend) = 0;
             QString tenBoxName = "tendon_" + QString::number(seg + 1) + "_" + QString::number(tend + 1);
             QDoubleSpinBox* tenLenBox = ui->verticalLayoutWidget->findChild<QDoubleSpinBox *>(tenBoxName);
+            tenLenBox->setValue(tendonLengthChangeUI[0](seg, tend) * 1000.0);
             tenLenBox->setStyleSheet("background-color: white;");
         }
     }
@@ -519,6 +567,29 @@ void MainWindow::on_outerRadBox_valueChanged(double newOuterRad)
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
     controller->getConstraint(curConstraint->text()).updateOuterRadius(newOuterRad / 1000);
+    return;
+}
+
+void MainWindow::on_showScenarioButton_clicked()
+{
+    QString currentScenario = ui->scenarioList->currentItem()->text();
+    if (currentScenario != "update configuration (default)") {
+        Eigen::Matrix4d initialTipPose = robots[selectedRobotId].CalcTipPose(tendonLengthChangeOld[selectedRobotId], segLengthOld[selectedRobotId]);
+        std::vector<Eigen::Matrix4d> pathPts = scenarioLoader->getScenario(currentScenario).getPathPts();
+        for (int i = 0; i < pathPts.size(); i++) {
+            pathPts[i].topRightCorner(3, 1) += initialTipPose.topRightCorner(3, 1);
+        }
+        std::vector<bool> dropConstraint = scenarioLoader->getScenario(currentScenario).dropConstraint();
+        bool showConstraints = true;
+
+        visualizer->showPath(pathPts, dropConstraint, showConstraints);
+    }
+    return;
+}
+
+void MainWindow::on_hideScenarioButton_clicked()
+{
+    visualizer->clearPath();
     return;
 }
 

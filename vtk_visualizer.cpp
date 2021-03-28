@@ -54,6 +54,8 @@ VtkVisualizer::VtkVisualizer(std::vector<TendonRobot> & robots)
 
     renderer->SetBackground(1.0, 1.0, 1.0);
     renderWindow->AddRenderer(renderer);
+
+    pathVisual = nullptr;
 }
 
 VtkVisualizer::~VtkVisualizer()
@@ -138,6 +140,36 @@ void VtkVisualizer::updateConstraintSelected(QString constraintLabel, bool selec
     getConstraintVisual(constraintLabel).updateColor(selected);
     renderWindow->Render();
 }
+
+void VtkVisualizer::showPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<bool> dropConstraint, bool showConstraints)
+{
+    if (pathVisual != nullptr) {
+        clearPath();
+    }
+    pathVisual = new PathVisual(pathPts, dropConstraint, showConstraints);
+
+    for (int i = 0; i < pathVisual->pointActors.size(); i++) {
+        renderer->AddActor(pathVisual->pointActors[i]);
+    }
+    renderer->AddActor(pathVisual->pathActor);
+    renderWindow->Render();
+}
+
+void VtkVisualizer::clearPath()
+{
+    if (pathVisual != nullptr) {
+        for (int i = 0; i < pathVisual->pointActors.size(); i++) {
+            renderer->RemoveActor(pathVisual->pointActors[i]);
+        }
+        renderer->RemoveActor(pathVisual->pathActor);
+        delete pathVisual;
+        pathVisual = nullptr;
+
+        renderWindow->Render();
+    }
+}
+
+// TACRVisual
 
 VtkVisualizer::TACRVisual::TACRVisual(TendonRobot & robot)
 {
@@ -334,6 +366,8 @@ bool VtkVisualizer::TACRVisual::SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, 
     return true;
 }
 
+// PointConstraintVisual
+
 VtkVisualizer::PointConstraintVisual::PointConstraintVisual(
                                             QString initLabel,
                                             Eigen::Vector3d initPosition,
@@ -382,4 +416,57 @@ void VtkVisualizer::PointConstraintVisual::updateColor(bool selected)
     else {
         pointActor->GetProperty()->SetColor(0.0, 0.6, 0.0);
     }
+}
+
+// PathVisual
+
+VtkVisualizer::PathVisual::PathVisual(  std::vector<Eigen::Matrix4d> pathPts, 
+                                        std::vector<bool> dropConstraint,
+                                        bool showConstraints)
+{
+    pathSpline = vtkSmartPointer<vtkParametricSpline>::New();
+    pathFunctionSource = vtkSmartPointer<vtkParametricFunctionSource>::New();
+    pathFunctionSource->SetParametricFunction(pathSpline);
+    // Create a tube (cylinder) around the spline
+    pathTubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
+    pathTubeFilter->SetInputConnection(pathFunctionSource->GetOutputPort());
+    pathTubeFilter->SetRadius(1e-3);
+    pathTubeFilter->SetNumberOfSides(50);
+
+    pathMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    pathMapper->SetInputConnection(pathTubeFilter->GetOutputPort());
+    pathActor = vtkSmartPointer<vtkActor>::New();
+    pathActor->SetMapper(pathMapper);
+    pathActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+
+    vtkNew<vtkPoints> pathPoints;
+    for (int i = 0; i < pathPts.size(); i++) {
+        Eigen::Vector3d pointCenter = pathPts[i].topRightCorner(3, 1);
+        double pointCenterRaw[3];
+        Eigen::Vector3d::Map(pointCenterRaw, pointCenter.rows()) = pointCenter;
+        pathPoints->InsertNextPoint(pointCenterRaw);
+
+        if (showConstraints && dropConstraint[i]) {
+            vtkNew<vtkSphereSource> pointSource;
+            pointSource->SetCenter(pointCenterRaw);
+            pointSource->SetRadius(2e-3);
+
+            pointSource->SetPhiResolution(100);
+            pointSource->SetThetaResolution(100);
+
+            vtkNew<vtkPolyDataMapper> pointMapper;
+            pointMapper->SetInputConnection(pointSource->GetOutputPort());
+
+            vtkNew<vtkActor> pointActor;
+            pointActor->SetMapper(pointMapper);
+            pointActor->GetProperty()->SetColor(0.0, 0.6, 0.0);
+
+            pointSources.push_back(pointSource);
+            pointMappers.push_back(pointMapper);
+            pointActors.push_back(pointActor);
+        }
+    }
+    pathSpline->SetPoints(pathPoints);
+    pathFunctionSource->Update();
+    pathTubeFilter->Update();
 }

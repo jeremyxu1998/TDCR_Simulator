@@ -96,6 +96,24 @@ private:
 
     };
 
+    class PathVisual
+    {
+    public:
+        PathVisual( std::vector<Eigen::Matrix4d> pathPts, 
+                    std::vector<bool> dropConstraint,
+                    bool showConstraints);
+        
+        vtkSmartPointer<vtkParametricSpline> pathSpline;
+        vtkSmartPointer<vtkParametricFunctionSource> pathFunctionSource;
+        vtkSmartPointer<vtkTubeFilter> pathTubeFilter;
+        vtkSmartPointer<vtkPolyDataMapper> pathMapper;
+        vtkSmartPointer<vtkActor> pathActor;
+
+        std::vector<vtkSmartPointer<vtkSphereSource>> pointSources;
+        std::vector<vtkSmartPointer<vtkPolyDataMapper>> pointMappers;
+        std::vector<vtkSmartPointer<vtkActor>> pointActors;
+    };
+
 public:
     PointConstraintVisual & getConstraintVisual(QString constraintLabel);
     void addConstraintVisual(QString constraintLabel, Eigen::Vector3d constraintPosition, double constraintRadius);
@@ -104,6 +122,9 @@ public:
     void updateConstraintInnerRadius(QString constraintLabel, double constraintRadius);
     void updateConstraintSelected(QString constraintLabel, bool selected);
 
+    void showPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<bool> dropConstraint, bool showConstraints);
+    void clearPath();
+
 private:
     int numRobots;
     std::vector<TACRVisual> robotsVisual;
@@ -111,6 +132,8 @@ private:
 
     int numConstraints;
     std::vector<PointConstraintVisual> pointsVisual;
+
+    PathVisual* pathVisual;
 };
 
 #endif // VTK_VISUALIZER_H
