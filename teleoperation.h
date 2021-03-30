@@ -72,6 +72,7 @@ private:
     bool m_looping;  // Main loop, controlled by start/stop button on UI
     bool m_enabled;  // Clutch in/out. controlled by input device
     int m_frameFreq;  // Frame update frequency
+    double m_PGainTendon, m_PGainBbone;  // Controller gain
 
     InputDevice *pInputDevice;
     QList<InputDevice*> m_inputDeviceList;

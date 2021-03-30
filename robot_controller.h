@@ -7,7 +7,7 @@
 class BaseController
 {
 public:
-    BaseController(int freq);
+    BaseController(int freq, double PTendon = 2, double PBbone = 12);
     ~BaseController();
 
     bool PathPlanningUpdate(TendonRobot & robot, const Eigen::Matrix4d & T_target,

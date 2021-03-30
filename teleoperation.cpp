@@ -30,7 +30,7 @@ void TeleoperationWidget::on_inputDevComboBox_activated(const QString &s)
 
 void TeleoperationWidget::on_scaleSpinBox_valueChanged(double arg1)
 {
-
+    // TODO
 }
 
 void TeleoperationWidget::on_startButton_clicked()
@@ -59,8 +59,10 @@ TACRTeleoperation::TACRTeleoperation(TendonRobot &r, VtkVisualizer *visualizer)
     m_looping = false;
     m_enabled = false;
     m_scaling = 0.5;
-    m_frameFreq = 10;
-    pController = new BaseController(m_frameFreq);
+    m_frameFreq = 10;  // Hz
+    m_PGainTendon = 10;  // Need higher gain for teleoperation compared with tip pose control
+    m_PGainBbone = 60;
+    pController = new BaseController(m_frameFreq, m_PGainTendon, m_PGainBbone);
     prevMasterFrame = Eigen::Matrix4d::Identity();
     curMasterFrame = Eigen::Matrix4d::Identity();
 }
@@ -132,7 +134,7 @@ void TACRTeleoperation::slot_clutchOut()
 
 void TACRTeleoperation::CheckInputDevices()
 {
-    InputDevice* m_devicePhantom= new GeomagicTouchInput();
+    InputDevice* m_devicePhantom = new GeomagicTouchInput();
     connect(m_devicePhantom, SIGNAL(sgn_connectedStatus(bool, QString)),
             this, SLOT(slot_deviceConnectionStatus(bool, QString)));
     if (m_devicePhantom->initializeDevice()) {
@@ -152,12 +154,14 @@ void TACRTeleoperation::CheckInputDevices()
 
 void TACRTeleoperation::MainLoop()
 {
+    emit sgn_startTeleoperateToDev(true);
     int iterTimeLength = 1000 / m_frameFreq;
     while (m_looping) {
-        QElapsedTimer timer;
-        timer.start();
-        if (pInputDevice != nullptr && m_enabled) {
-            qDebug() << "Motion:";
+        if (pInputDevice != nullptr && m_enabled) {  // Clutched in
+            QElapsedTimer timer;
+            timer.start();
+
+            // qDebug() << "Motion:";
             curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
             prevRobotFrameGlobal = robot.GetTipPose();
             // std::stringstream ss;
@@ -165,9 +169,8 @@ void TACRTeleoperation::MainLoop()
             // qDebug() << QString::fromStdString(ss.str());
             robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
             robotFrameDelta.topRightCorner(3,1) *= m_scaling;  // TODO: rotation scaling option
-            std::stringstream ss;
-            ss << robotFrameDelta;
-            qDebug() << QString::fromStdString(ss.str());
+            // ss << robotFrameDelta;
+            // qDebug() << QString::fromStdString(ss.str());
             targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
             bool reachTarget = pController->PathPlanningUpdate(robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
             if (reachTarget)
@@ -182,9 +185,13 @@ void TACRTeleoperation::MainLoop()
             QCoreApplication::processEvents();  // Notify Qt to update the widget
 
             prevMasterFrame = curMasterFrame;
+
+            int iterProcTime = timer.elapsed();
+            qDebug() << "Iteration processed in " << iterProcTime << " msec";
+            QTest::qWait(std::max(iterTimeLength - iterProcTime, 0));
         }
-        int iterProcTime = timer.elapsed();
-        qDebug() << "Iteration processed in " << iterProcTime << " msec";
-        QTest::qWait(std::max(iterTimeLength - iterProcTime, 0));
+        else {  // Idle
+            QTest::qWait(iterTimeLength);
+        }
     }
 }

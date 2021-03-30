@@ -1,6 +1,6 @@
 #include "robot_controller.h"
 
-BaseController::BaseController(int freq)
+BaseController::BaseController(int freq, double PTendon, double PBbone)
 {
     calcFreq = 1000;
     updateFreq = freq;
@@ -9,8 +9,8 @@ BaseController::BaseController(int freq)
     stepSize = 1e-7;
     taskWeightSegLen = 0.01;
     taskWeightCurv = 0.5;
-    PGainTendon = 2;
-    PGainBbone = 12;
+    PGainTendon = PTendon;
+    PGainBbone = PBbone;
     posAccuReq = 5e-4;
     oriAccuReq = 0.05;  // rad
 }
