@@ -73,11 +73,11 @@ void ScenarioLoader::deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
 {
     //Simple looped path with height variation
     int steps = 1000;
-    double radius = 0.04;
-    double height = 0; // radius/8;
+    double radius = 0.01;
+    double height = radius;
     int count = 0;
 
-    double tilt = 1;
+    double tilt = -M_PI/2;
     Eigen::Matrix4d tilt_matrix;
     tilt_matrix << std::cos(tilt), 0, std::sin(tilt), 0,
                     0, 1, 0, 0,
@@ -87,7 +87,7 @@ void ScenarioLoader::deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
     for(double theta = 0; theta <= 2*M_PI; theta += 2*M_PI/steps) {
         Eigen::Matrix4d target = Eigen::Matrix4d::Identity();
 
-        target(0,3) += height*std::sin(4*theta);
+        target(0,3) += height*theta;
         target(1,3) += radius*std::sin(theta);
         target(2,3) += -radius*std::cos(theta)+radius;
 
@@ -95,7 +95,7 @@ void ScenarioLoader::deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
 
         pathPts.push_back(target);
         if (count == 0) {
-            count = 50;
+            count = 500;
             dropConstraint.push_back(true);
         }
         else {

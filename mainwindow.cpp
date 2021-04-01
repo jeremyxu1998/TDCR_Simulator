@@ -62,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->mainSplitter->addWidget(visualizer->getWidget());
 
     InitPosePlot();
+    InitErrPlot();
 }
 
 MainWindow::~MainWindow()
@@ -71,6 +72,7 @@ MainWindow::~MainWindow()
     delete visualizer;
     delete scenarioLoader;
     DeletePosePlot();
+    DeleteErrPlot();
 }
 
 bool MainWindow::ReadFromXMLFile(QString const& fileName)
@@ -292,6 +294,16 @@ void MainWindow::on_posePlotCheckBox_stateChanged(int checked)
     }
 }
 
+void MainWindow::on_errPlotCheckBox_stateChanged(int checked)
+{
+    if (checked == Qt::Checked) {
+        errPlot.show();
+    }
+    else if (checked == Qt::Unchecked) {
+        errPlot.hide();
+    }
+}
+
 void MainWindow::on_calculateButton_clicked()
 {
     // Only supports single robot
@@ -372,6 +384,21 @@ void MainWindow::on_controlButton_clicked()
     zPlot->data()->clear();
     UpdatePosePlot(0.0, initialTipPose);
 
+    double positionConErr = 0;
+    double avgPositionConErr = 0;
+    double orientationConErr = 0;
+    double avgOrientationConErr = 0;
+    double positionErr = 0;
+    double avgPositionErr = 0;
+    double orientationErr = 0;
+    double avgOrientationErr = 0;
+
+    pErrPlot->data()->clear();
+    pConErrPlot->data()->clear();
+    oErrPlot->data()->clear();
+    oConErrPlot->data()->clear();
+    UpdateErrPlot(0.0, 0, 0, 0, 0);
+
     QString currentScenario = ui->scenarioList->currentItem()->text();
 
     if (currentScenario == "update configuration (default)") {
@@ -420,7 +447,13 @@ void MainWindow::on_controlButton_clicked()
             robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
             allDisksPose.emplace_back(robots[0].GetAllDisksPose());
             // }
+            positionConErr = controller->calcConstraintsCost(robotId, allDisksPose[0], false);
+            avgPositionConErr += positionConErr;
+
             Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+            positionErr = (targetTipPose.topRightCorner(3, 1) - curTipPose.topRightCorner(3, 1)).norm();
+            avgPositionErr += positionErr;
+
             visualizer->UpdateVisualization(allDisksPose);
             ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
 
@@ -431,9 +464,13 @@ void MainWindow::on_controlButton_clicked()
             QCoreApplication::processEvents();  // Notify Qt to update the widget
             double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
             UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
+            UpdateErrPlot((frameCount + 1) * frameInterval, positionErr, positionConErr, orientationErr, orientationConErr);
 
             std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
         }
+
+        avgPositionConErr = avgPositionConErr / pathPts.size();
+        avgPositionErr = avgPositionErr / pathPts.size();
     }
 
     ui->progressBar->setValue(100);
@@ -471,15 +508,15 @@ void MainWindow::on_constraintAdd_clicked()
     QString newConstraintLabel = "constraint_" + QString::number(selectedRobotId + 1) + "_" + QString::number(randID);
     new QListWidgetItem(newConstraintLabel, ui->constraintList);
 
-    Eigen::Vector3d curTipPosition = robots[selectedRobotId].GetTipPose().topRightCorner(3,1);
+    Eigen::Matrix4d curTipPose = robots[selectedRobotId].GetTipPose();
 
     // Create new constraint in target robot object
-    controller->addPointConstraint(newConstraintLabel, curTipPosition);
+    controller->addPointConstraint(newConstraintLabel, curTipPose);
 
     // Create sphere in visualizer with set radii at the robot pose tip
     double innerRad = controller->getConstraint(newConstraintLabel).getInnerRadius();
 
-    visualizer->addConstraintVisual(newConstraintLabel, curTipPosition, innerRad);
+    visualizer->addConstraintVisual(newConstraintLabel, curTipPose, innerRad);
 
     return;
 }
@@ -487,6 +524,11 @@ void MainWindow::on_constraintAdd_clicked()
 void MainWindow::on_constraintDel_clicked()
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+
+    if (curConstraint == nullptr) {
+        return; 
+    }
+
     bool deletedControl = controller->deletePointConstraint(curConstraint->text());
 
     if (deletedControl) {
@@ -507,12 +549,12 @@ void MainWindow::on_constraintDel_clicked()
 
 void MainWindow::on_constraintList_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-    if (!current) {
+    if (current == nullptr) {
         return;
     }
 
     QString currentLabel = current->text();
-    if (previous) {
+    if (previous != nullptr) {
         QString previousLabel = previous->text();
         visualizer->updateConstraintSelected(previousLabel, false);
     }
@@ -546,18 +588,29 @@ void MainWindow::on_constraintList_currentItemChanged(QListWidgetItem *current, 
 
 void MainWindow::on_backboneSlider_valueChanged(int diskValue)
 {
-    QString currentLabel = ui->constraintList->currentItem()->text();
+    QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+
+    if (curConstraint == nullptr) {
+        return; 
+    }
+
+    QString currentLabel = curConstraint->text();
     int robotId = currentLabel.split("_")[1].toInt() - 1;
 
-    Eigen::Vector3d diskPosition = robots[robotId].GetAllDisksPose()[diskValue].topRightCorner(3,1);
-    controller->getConstraint(currentLabel).updatePosition(diskPosition);
-    visualizer->updateConstraintPosition(currentLabel, diskPosition);
+    Eigen::Matrix4d diskPose = robots[robotId].GetAllDisksPose()[diskValue];
+    controller->getConstraint(currentLabel).updatePose(diskPose);
+    visualizer->updateConstraintPose(currentLabel, diskPose);
     return;
 }
 
 void MainWindow::on_innerRadBox_valueChanged(double newInnerRad)
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+
+    if (curConstraint == nullptr) {
+        return; 
+    }
+
     controller->getConstraint(curConstraint->text()).updateInnerRadius(newInnerRad / 1000);
     visualizer->updateConstraintInnerRadius(curConstraint->text(), newInnerRad / 1000);
     return;
@@ -566,6 +619,11 @@ void MainWindow::on_innerRadBox_valueChanged(double newInnerRad)
 void MainWindow::on_outerRadBox_valueChanged(double newOuterRad)
 {
     QListWidgetItem* curConstraint = ui->constraintList->currentItem();
+
+    if (curConstraint == nullptr) {
+        return; 
+    }
+
     controller->getConstraint(curConstraint->text()).updateOuterRadius(newOuterRad / 1000);
     return;
 }
@@ -656,4 +714,48 @@ void MainWindow::UpdatePosePlot(double t, Eigen::Matrix4d pose)
     yawPlot->addData(t, rpy(2) / M_PI * 180.0);
     yawPlot->rescaleAxes();
     posePlot.replot();
+}
+
+void MainWindow::InitErrPlot()
+{
+    errPlot.resize(1000, 600);
+    errPlot.plotLayout()->clear();  // Clear default axis rect and start from scratch
+    pErrAxes = new QCPAxisRect(&errPlot);
+    oErrAxes = new QCPAxisRect(&errPlot);
+    errPlot.plotLayout()->addElement(0, 0, pErrAxes);
+    errPlot.plotLayout()->addElement(1, 0, oErrAxes);
+
+    pErrPlot = errPlot.addGraph(pErrAxes->axis(QCPAxis::atBottom), pErrAxes->axis(QCPAxis::atLeft));
+    pErrPlot->setPen(QPen(Qt::red));
+    pConErrPlot = errPlot.addGraph(pErrAxes->axis(QCPAxis::atBottom), pErrAxes->axis(QCPAxis::atLeft));
+    pConErrPlot->setPen(QPen(Qt::blue));
+    pErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    pErrAxes->axis(QCPAxis::atLeft)->setLabel("Position Error (mm)");
+
+    oErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
+    oErrPlot->setPen(QPen(Qt::red));
+    oConErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
+    oConErrPlot->setPen(QPen(Qt::blue));
+    oErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    oErrAxes->axis(QCPAxis::atLeft)->setLabel("Orientation Error (rad)");
+}
+
+void MainWindow::DeleteErrPlot()
+{
+    delete pErrAxes;
+    delete oErrAxes;
+}
+
+void MainWindow::UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr)
+{
+    pErrPlot->addData(t, pErr * 1000.0);
+    pErrPlot->rescaleAxes();
+    pConErrPlot->addData(t, pConErr * 1000.0);
+    pConErrPlot->rescaleAxes(true);
+    oErrPlot->addData(t, oErr * 1000.0);
+    oErrPlot->rescaleAxes();
+    oConErrPlot->addData(t, oConErr * 1000.0);
+    oConErrPlot->rescaleAxes(true);
+
+    errPlot.replot();
 }

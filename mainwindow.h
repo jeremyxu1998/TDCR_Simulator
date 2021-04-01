@@ -41,8 +41,9 @@ private slots:
     void on_outerRadBox_valueChanged(double newOuterRad);
 
     void on_showScenarioButton_clicked();
-
     void on_hideScenarioButton_clicked();
+
+    void on_errPlotCheckBox_stateChanged(int arg1);
 
 private:
     Ui::MainWindow *ui;
@@ -50,9 +51,9 @@ private:
     int selectedRobotId;
 
     // Tip pose plotting
-    QCustomPlot posePlot;
-    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes;
-    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot;
+    QCustomPlot posePlot, errPlot;
+    QCPAxisRect *xPlotAxes, *yPlotAxes, *zPlotAxes, *rollPlotAxes, *pitchPlotAxes, *yawPlotAxes, *pErrAxes, *oErrAxes;
+    QCPGraph *xPlot, *yPlot, *zPlot, *rollPlot, *pitchPlot, *yawPlot, *pErrPlot, *oErrPlot, *pConErrPlot, *oConErrPlot;
 
     std::vector<TendonRobot> robots;
     std::vector<Eigen::VectorXd> segLengthUI;
@@ -76,5 +77,10 @@ private:
     void InitPosePlot();
     void DeletePosePlot();
     void UpdatePosePlot(double t, Eigen::Matrix4d pose);
+
+    // Error Pose Plotting
+    void InitErrPlot();
+    void DeleteErrPlot();
+    void UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr);
 };
 #endif // MAINWINDOW_H

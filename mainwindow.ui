@@ -212,11 +212,36 @@ First segment:</string>
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="posePlotCheckBox">
-          <property name="text">
-           <string>Plot Pose</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="plotterLayout">
+          <item>
+           <widget class="QCheckBox" name="posePlotCheckBox">
+            <property name="text">
+             <string>Plot Pose</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="posePlotSaveButton">
+            <property name="text">
+             <string>Save</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="errPlotCheckBox">
+            <property name="text">
+             <string>Error Plot</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="errPlotSaveButton">
+            <property name="text">
+             <string>Save</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="updateLayout">

@@ -92,10 +92,10 @@ VtkVisualizer::PointConstraintVisual & VtkVisualizer::getConstraintVisual(QStrin
     return (*iter);
 }
 
-void VtkVisualizer::addConstraintVisual(QString constraintLabel, Eigen::Vector3d constraintPosition, double constraintRadius)
+void VtkVisualizer::addConstraintVisual(QString constraintLabel, Eigen::Matrix4d constraintPose, double constraintRadius)
 {
     PointConstraintVisual newConstraint(constraintLabel,
-                                        constraintPosition,
+                                        constraintPose,
                                         constraintRadius);
     
     pointsVisual.emplace_back(newConstraint);
@@ -123,9 +123,9 @@ bool VtkVisualizer::deleteConstraintVisual(QString constraintLabel)
     return false;
 }
 
-void VtkVisualizer::updateConstraintPosition(QString constraintLabel, Eigen::Vector3d constraintPosition)
+void VtkVisualizer::updateConstraintPose(QString constraintLabel, Eigen::Matrix4d constraintPose)
 {
-    getConstraintVisual(constraintLabel).updatePosition(constraintPosition);
+    getConstraintVisual(constraintLabel).updatePose(constraintPose);
     renderWindow->Render();
 }
 
@@ -370,10 +370,11 @@ bool VtkVisualizer::TACRVisual::SetAxesPose(vtkSmartPointer<vtkAxesActor> axes, 
 
 VtkVisualizer::PointConstraintVisual::PointConstraintVisual(
                                             QString initLabel,
-                                            Eigen::Vector3d initPosition,
+                                            Eigen::Matrix4d initPose,
                                             double initInnerRadius)
 {
     pointLabel = initLabel;
+    Eigen::Vector3d initPosition = initPose.topRightCorner(3, 1);
     
     pointSource = vtkSmartPointer<vtkSphereSource>::New();
     pointSource->SetCenter(initPosition[0], initPosition[1], initPosition[2]);
@@ -395,8 +396,9 @@ QString VtkVisualizer::PointConstraintVisual::getLabel() const
     return pointLabel;
 }
 
-void VtkVisualizer::PointConstraintVisual::updatePosition(Eigen::Vector3d newPosition)
+void VtkVisualizer::PointConstraintVisual::updatePose(Eigen::Matrix4d newPose)
 {
+    Eigen::Vector3d newPosition = newPose.topRightCorner(3, 1);
     pointSource->SetCenter(newPosition[0], newPosition[1], newPosition[2]);
 }
 

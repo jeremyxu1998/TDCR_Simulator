@@ -20,23 +20,23 @@ private:
     {
         public:
             PointConstraint(QString initLabel,
-                            Eigen::Vector3d initPosition,
+                            Eigen::Matrix4d initPose,
                             double initInnerRadius,
                             double initOuterRadius);
             
             QString getLabel() const;
-            Eigen::Vector3d getPosition() const;
+            Eigen::Matrix4d getPose() const;
             double getInnerRadius() const;
             double getOuterRadius() const;
 
-            void updatePosition(Eigen::Vector3d newPosition);
+            void updatePose(Eigen::Matrix4d newPose);
             void updateInnerRadius(double newRadius);
             void updateOuterRadius(double newRadius); 
 
         private:
 
             QString m_pointLabel;
-            Eigen::Vector3d m_pointPosition;
+            Eigen::Matrix4d m_pointPose;
             double m_pointInnerRadius;
             double m_pointOuterRadius;
     };
@@ -45,8 +45,9 @@ public:
     int getNumConstraints();
     std::vector<PointConstraint> & getConstraints();
     PointConstraint & getConstraint(QString constraintLabel);
-    void addPointConstraint(QString constraintLabel, Eigen::Vector3d constraintPosition);
+    void addPointConstraint(QString constraintLabel, Eigen::Matrix4d constraintPose);
     bool deletePointConstraint(QString constraintLabel);
+    double calcConstraintsCost(int robotId, std::vector<Eigen::Matrix4d> & curDisksPose, bool adjusted);
 
 private:
     int calcFreq, updateFreq;
@@ -58,13 +59,12 @@ private:
     double PGainTendon, PGainBbone;  // Proportional gain
     double posAccuReq, oriAccuReq;  // Position and orientation accuracy requirement
 
+    Eigen::Matrix4d InverseTF(const Eigen::Matrix4d & T);
     Eigen::Matrix4d MatrixLog(const Eigen::Matrix4d & T, double & theta);
     void UnpackRobotConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur,
                             Eigen::MatrixXd & curTendonLengthChange, Eigen::VectorXd & curSegLength);  // Unpack q to segment parameter matrices
     Eigen::VectorXd BalanceTendonConfig(TendonRobot & robot, int numTendon, const Eigen::VectorXd & q_cur);
     void RoundValues(Eigen::VectorXd & vals, double precision);
-
-    double calcConstraintsCost(int robotId, std::vector<Eigen::Matrix4d> & curDisksPose);
 
     // Constraint members
     int m_numConstraints;

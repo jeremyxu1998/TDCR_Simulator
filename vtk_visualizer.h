@@ -79,7 +79,7 @@ private:
     {
     public:
         PointConstraintVisual(  QString initLabel,
-                                Eigen::Vector3d initPosition,
+                                Eigen::Matrix4d initPose,
                                 double initInnerRadius);
 
         vtkSmartPointer<vtkSphereSource> pointSource;
@@ -87,7 +87,7 @@ private:
         vtkSmartPointer<vtkActor> pointActor;
 
         QString getLabel() const;
-        void updatePosition(Eigen::Vector3d newPosition);
+        void updatePose(Eigen::Matrix4d newPose);
         void updateInnerRadius(double newRadius);
         void updateColor(bool selected);
 
@@ -116,9 +116,9 @@ private:
 
 public:
     PointConstraintVisual & getConstraintVisual(QString constraintLabel);
-    void addConstraintVisual(QString constraintLabel, Eigen::Vector3d constraintPosition, double constraintRadius);
+    void addConstraintVisual(QString constraintLabel, Eigen::Matrix4d constraintPose, double constraintRadius);
     bool deleteConstraintVisual(QString constraintLabel);
-    void updateConstraintPosition(QString constraintLabel, Eigen::Vector3d constraintPosition);
+    void updateConstraintPose(QString constraintLabel, Eigen::Matrix4d constraintPose);
     void updateConstraintInnerRadius(QString constraintLabel, double constraintRadius);
     void updateConstraintSelected(QString constraintLabel, bool selected);
 
