@@ -340,7 +340,7 @@ void MainWindow::on_calculateButton_clicked()
         visualizer->UpdateVisualization(allDisksPose);
         ui->progressBar->setValue((int) 100 * frame_count / frame_num);
         QCoreApplication::processEvents();  // Notify Qt to update the widget
-        std::this_thread::sleep_for(std::chrono::milliseconds(40));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     ui->progressBar->setValue(100);
@@ -384,14 +384,14 @@ void MainWindow::on_controlButton_clicked()
     zPlot->data()->clear();
     UpdatePosePlot(0.0, initialTipPose);
 
-    double positionConErr = 0;
-    double avgPositionConErr = 0;
-    double orientationConErr = 0;
-    double avgOrientationConErr = 0;
-    double positionErr = 0;
-    double avgPositionErr = 0;
-    double orientationErr = 0;
-    double avgOrientationErr = 0;
+    double pConErr = 0;
+    double avgPConErr = 0;
+    double oConErr = 0;
+    double avgOConErr = 0;
+    double pErr = 0;
+    double avgPErr = 0;
+    double oErr = 0;
+    double avgOErr = 0;
 
     pErrPlot->data()->clear();
     pConErrPlot->data()->clear();
@@ -438,6 +438,10 @@ void MainWindow::on_controlButton_clicked()
 
         visualizer->showPath(pathPts, dropConstraint, showConstraints);
 
+        QElapsedTimer timer;
+        timer.start();
+        double lastTime = 0.0;
+
         for (int frameCount = 0; frameCount < pathPts.size(); frameCount++) {
             Eigen::Matrix4d targetTipPose = pathPts[frameCount];
 
@@ -446,13 +450,15 @@ void MainWindow::on_controlButton_clicked()
             allDisksPose.clear();
             robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
             allDisksPose.emplace_back(robots[0].GetAllDisksPose());
-            // }
-            positionConErr = controller->calcConstraintsCost(robotId, allDisksPose[0], false);
-            avgPositionConErr += positionConErr;
 
-            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
-            positionErr = (targetTipPose.topRightCorner(3, 1) - curTipPose.topRightCorner(3, 1)).norm();
-            avgPositionErr += positionErr;
+            double curTime = timer.elapsed();
+            double tElapsed = curTime - lastTime;
+
+            controller->ComputePathErrors(robotId, allDisksPose[0], targetTipPose, tElapsed, pErr, oErr, pConErr, oConErr);
+            avgPErr += pErr;
+            avgOErr += oErr;
+            avgPConErr += pConErr;
+            avgOConErr += oConErr;
 
             visualizer->UpdateVisualization(allDisksPose);
             ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
@@ -462,15 +468,26 @@ void MainWindow::on_controlButton_clicked()
             }
 
             QCoreApplication::processEvents();  // Notify Qt to update the widget
-            double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
-            UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
-            UpdateErrPlot((frameCount + 1) * frameInterval, positionErr, positionConErr, orientationErr, orientationConErr);
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
+            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+            UpdatePosePlot(curTime / 1000, curTipPose);
+            UpdateErrPlot(curTime / 1000, pErr, pConErr, oErr, oConErr);
+            lastTime = curTime;
+
+            // double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
+            // UpdatePosePlot((frameCount + 1) * frameInterval, curTipPose);
+            // UpdateErrPlot((frameCount + 1) * frameInterval, positionErr, positionConErr, orientationErr, orientationConErr);
+
+            // std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
         }
 
-        avgPositionConErr = avgPositionConErr / pathPts.size();
-        avgPositionErr = avgPositionErr / pathPts.size();
+        avgPErr = 1000 * avgPErr / pathPts.size();
+        qDebug() << "Average Path Error: " << avgPErr;
+        avgOErr = avgOErr / pathPts.size();
+        qDebug() << "Average Path Orientation Error: " << avgOErr;
+        avgPConErr = 1000 * avgPConErr / pathPts.size();
+        qDebug() << "Average Constraint Error: " << avgPConErr;
+        // avgOConErr = avgOConErr / pathPts.size(); // Not currently tracking orientation error for constraints
     }
 
     ui->progressBar->setValue(100);
@@ -758,4 +775,14 @@ void MainWindow::UpdateErrPlot(double t, double pErr, double pConErr, double oEr
     oConErrPlot->rescaleAxes(true);
 
     errPlot.replot();
+}
+
+void MainWindow::on_errPlotSaveButton_clicked()
+{
+    QString outputDir = QDir::currentPath() + "/output";
+    QDateTime now = QDateTime::currentDateTime();
+    QString timeStamp = now.toString(QLatin1String("yyyyMMdd-hhmmsszzz"));
+    QString fileName = QString::fromLatin1("errors-%1.jpg").arg(timeStamp);
+
+    errPlot.savePng(outputDir+"/"+fileName, 0, 0, 1.0, -1);
 }

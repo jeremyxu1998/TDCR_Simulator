@@ -432,7 +432,7 @@ VtkVisualizer::PathVisual::PathVisual(  std::vector<Eigen::Matrix4d> pathPts,
     // Create a tube (cylinder) around the spline
     pathTubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
     pathTubeFilter->SetInputConnection(pathFunctionSource->GetOutputPort());
-    pathTubeFilter->SetRadius(1e-3);
+    pathTubeFilter->SetRadius(0.5e-3);
     pathTubeFilter->SetNumberOfSides(50);
 
     pathMapper = vtkSmartPointer<vtkPolyDataMapper>::New();

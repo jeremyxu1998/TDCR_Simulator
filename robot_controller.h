@@ -14,6 +14,9 @@ public:
 
     bool PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, const Eigen::Matrix4d & T_target,
                         Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength);
+    
+    void ComputePathErrors(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, const Eigen::Matrix4d & T_target, double tElapsed,
+                            double & pErr, double & oErr, double & pConErr, double & oConErr);
 
 private:
     class PointConstraint
@@ -47,16 +50,17 @@ public:
     PointConstraint & getConstraint(QString constraintLabel);
     void addPointConstraint(QString constraintLabel, Eigen::Matrix4d constraintPose);
     bool deletePointConstraint(QString constraintLabel);
-    double calcConstraintsCost(int robotId, std::vector<Eigen::Matrix4d> & curDisksPose, bool adjusted);
+    double calcConstraintsCost(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, bool adjusted);
 
 private:
     int calcFreq, updateFreq;
     double qEpsilon;  // small change in q when calculating numerical derivatives (Jacobian, curvature)
-    double jointLimitWeight;  // Damping for JTJ matrix inverse close to singularity
-    double stepSize;
-    double taskWeightSegLen, taskWeightCurv;  // Sub-task (joint limit) weight, specific to each robot config
+    double stepSize; // step size for secondary task gradient
+    double secondTaskWeightTendon, secondTaskWeightBbone;  // Damping for JTJ matrix inverse close to singularity per actuation type
+    double taskWeightSegLen, taskWeightCurvTendon, taskWeightCurvBbone;  // Sub-task (joint limit) weight, specific to each robot config
     double taskWeightConstraint;    // Sub-task (constraint) weight
-    double PGainTendon, PGainBbone;  // Proportional gain
+    double PGain, IGain;  // Proportional/integral gains
+    double OGain; // gain on orientation component of target twist
     double posAccuReq, oriAccuReq;  // Position and orientation accuracy requirement
 
     Eigen::Matrix4d InverseTF(const Eigen::Matrix4d & T);

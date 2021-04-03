@@ -544,7 +544,17 @@ First segment:</string>
          </item>
          <item>
           <property name="text">
+           <string>loop_2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>deploy_1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>deploy_2</string>
           </property>
          </item>
         </widget>

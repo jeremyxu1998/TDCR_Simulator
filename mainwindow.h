@@ -45,6 +45,8 @@ private slots:
 
     void on_errPlotCheckBox_stateChanged(int arg1);
 
+    void on_errPlotSaveButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QButtonGroup robotSelectBtnGroup;
