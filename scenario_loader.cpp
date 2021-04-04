@@ -118,28 +118,23 @@ void ScenarioLoader::deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
 {
     //Simple looped path with height variation
     int steps = 1000;
-    double radius = 0.01;
-    double height = radius;
-    int count = 500;
+    double amplitude = 0.01;
+    double dist = 0.01;
+    int count = 0;
 
-    double tilt = -M_PI/2;
+    double tilt = 0;
     Eigen::Matrix4d tilt_matrix;
-    tilt_matrix << std::cos(tilt), 0, std::sin(tilt), 0,
-                    0, 1, 0, 0,
-                    -std::sin(tilt), 0, std::cos(tilt), 0,
+    tilt_matrix <<  1, 0, 0, 0,
+                    0, std::cos(tilt), -std::sin(tilt), 0,
+                    0, std::sin(tilt), std::cos(tilt), 0,
                     0, 0, 0, 1;
-    
-    Eigen::Matrix4d target1 = Eigen::Matrix4d::Identity();
-    target1 = tilt_matrix*target1;
-    pathPts.push_back(target1);
-    dropConstraint.push_back(true);
 
-    for(double theta = 2*M_PI/steps; theta <= 2*M_PI; theta += 2*M_PI/steps) {
+    for(double theta = 0; theta <= 2*M_PI; theta += 2*M_PI/steps) {
         Eigen::Matrix4d target = Eigen::Matrix4d::Identity();
 
-        target(0,3) += height*theta;
-        target(1,3) += radius*std::sin(theta);
-        target(2,3) += -radius*std::cos(theta)+radius;
+        target(0,3) += amplitude*(1 - std::cos(theta));
+        target(1,3) += 0;
+        target(2,3) += dist*theta;
 
         target = tilt_matrix*target;
 
@@ -184,7 +179,7 @@ void ScenarioLoader::deploy_2(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
         Eigen::Matrix4d target = Eigen::Matrix4d::Identity();
 
         target(0,3) += amplitude*(1 - std::cos(theta));
-        target(1,3) += 0;
+        target(1,3) += amplitude*std::sin(theta);
         target(2,3) += dist*theta;
 
         target = tilt_matrix*target;
@@ -199,7 +194,7 @@ void ScenarioLoader::deploy_2(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
 
         pathPts.push_back(target);
         if (count == 0) {
-            count = 500;
+            count = 334;
             dropConstraint.push_back(true);
         }
         else {

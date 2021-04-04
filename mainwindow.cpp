@@ -464,6 +464,7 @@ void MainWindow::on_controlButton_clicked()
             ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
 
             if (dropConstraint[frameCount]) {
+                qDebug() << "Adding constraint. Time stamp: " << curTime / 1000 << " seconds";
                 on_constraintAdd_clicked();
             }
 

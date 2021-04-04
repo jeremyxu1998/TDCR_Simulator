@@ -378,7 +378,7 @@ VtkVisualizer::PointConstraintVisual::PointConstraintVisual(
     
     pointSource = vtkSmartPointer<vtkSphereSource>::New();
     pointSource->SetCenter(initPosition[0], initPosition[1], initPosition[2]);
-    pointSource->SetRadius(initInnerRadius);
+    pointSource->SetRadius(initInnerRadius * 5);
 
     pointSource->SetPhiResolution(100);
     pointSource->SetThetaResolution(100);
@@ -404,7 +404,7 @@ void VtkVisualizer::PointConstraintVisual::updatePose(Eigen::Matrix4d newPose)
 
 void VtkVisualizer::PointConstraintVisual::updateInnerRadius(double newRadius)
 {
-    pointSource->SetRadius(newRadius);
+    pointSource->SetRadius(newRadius * 5);
 }
 
 void VtkVisualizer::PointConstraintVisual::updateColor(bool selected)

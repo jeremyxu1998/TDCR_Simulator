@@ -6,20 +6,20 @@ BaseController::BaseController(int freq)
     updateFreq = freq;
     qEpsilon = 1e-5;
     stepSize = 1e-7;
-    taskWeightSegLen = 0.01;
+    taskWeightSegLen = 0.1;
     taskWeightCurvTendon = 10;
-    taskWeightCurvBbone = 1;
-    taskWeightConstraint = 0.2;
+    taskWeightCurvBbone = 0.01;
+    taskWeightConstraint = 2000;
     secondTaskWeightTendon = 0.1;
-    secondTaskWeightBbone = 2;
+    secondTaskWeightBbone = 0.05;
     PGain = 0.05;
     IGain = 1;
     OGain = 0.05;
     posAccuReq = 0.1e-3;
     oriAccuReq = 0.05;  // rad
 
-    constraintInnerRadius = 2.0;
-    constraintOuterRadius = 5.0;
+    constraintInnerRadius = 0.5;
+    constraintOuterRadius = 1.0;
 }
 
 BaseController::~BaseController()
