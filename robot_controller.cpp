@@ -168,9 +168,12 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
         // Optimial solution equation for multi-task control
         Eigen::VectorXd q_dot = (JTJ + weightMat).inverse() * (J_body.transpose() * twist + weightMat * negGradCost);
         q_cur = IGain * q_cur + PGain * q_dot; //  * (1.0 / static_cast<double>(calcFreq));
+        // std::cout << "Q_cur" << q_cur << std::endl;
         // q_cur = BalanceTendonConfig(robot, numTendon, q_cur); // Obsolete: use if full config updated in inverse differential kinematics
 
         UnpackRobotConfig(robot, numTendon, q_cur, curTendonLengthChange, curSegLength);
+        // std::cout << "tendons" << std::endl << curTendonLengthChange << std::endl;
+        // std::cout << "segments" << std::endl << curSegLength << std::endl;
         curDisksPose = robot.CalcAllDisksPose(curTendonLengthChange, curSegLength);
         T_cur = curDisksPose.back();
 
@@ -297,8 +300,8 @@ void BaseController::ComputePathErrors(int robotId, const std::vector<Eigen::Mat
     Eigen::VectorXd omega(3);
     omega << S_skew(2,1), S_skew(0,2), S_skew(1,0);  // omega components
     omega *= theta;  // S is normalized, multiply by theta to get twist
-    double timeInterval = (tElapsed / 1000) / (calcFreq / updateFreq);
-    oErr = (timeInterval * omega).norm();
+    // double timeInterval = (tElapsed / 1000) / (calcFreq / updateFreq);
+    oErr = omega.norm(); // (timeInterval * omega).norm();
 
     oConErr = 0; // In current formulation, not tracking/using orientation errors for the constraints
 }

@@ -2,6 +2,7 @@
 #define ROBOT_CONTROLLER_H
 
 #include "tendon_robot.h"
+#include <iostream>
 #include <Eigen/Dense>
 #include <limits>
 #include <QDebug>

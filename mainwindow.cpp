@@ -749,13 +749,15 @@ void MainWindow::InitErrPlot()
     pConErrPlot->setPen(QPen(Qt::blue));
     pErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
     pErrAxes->axis(QCPAxis::atLeft)->setLabel("Position Error (mm)");
+    pErrAxes->axis(QCPAxis::atLeft)->setRange(0, 35);
 
     oErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
     oErrPlot->setPen(QPen(Qt::red));
     oConErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
     oConErrPlot->setPen(QPen(Qt::blue));
     oErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
-    oErrAxes->axis(QCPAxis::atLeft)->setLabel("Orientation Error (rad)");
+    oErrAxes->axis(QCPAxis::atLeft)->setLabel("Required Screw Axis Twist (rad/s)");
+    oErrAxes->axis(QCPAxis::atLeft)->setRange(0, 2);
 }
 
 void MainWindow::DeleteErrPlot()
@@ -767,13 +769,15 @@ void MainWindow::DeleteErrPlot()
 void MainWindow::UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr)
 {
     pErrPlot->addData(t, pErr * 1000.0);
-    pErrPlot->rescaleAxes();
+    // pErrPlot->rescaleAxes();
     pConErrPlot->addData(t, pConErr * 1000.0);
-    pConErrPlot->rescaleAxes(true);
-    oErrPlot->addData(t, oErr * 1000.0);
-    oErrPlot->rescaleAxes();
-    oConErrPlot->addData(t, oConErr * 1000.0);
-    oConErrPlot->rescaleAxes(true);
+    // pConErrPlot->rescaleAxes(true);
+    pErrAxes->axis(QCPAxis::atBottom)->rescale();
+    oErrPlot->addData(t, oErr);
+    // oErrPlot->rescaleAxes();
+    oConErrPlot->addData(t, oConErr);
+    // oConErrPlot->rescaleAxes(true);
+    oErrAxes->axis(QCPAxis::atBottom)->rescale();
 
     errPlot.replot();
 }
