@@ -1,5 +1,7 @@
 #include "scenario_loader.h"
 #include <math.h>
+#include <fstream>
+#include <QDebug>
 
 ScenarioLoader::ScenarioLoader()
 {
@@ -49,6 +51,13 @@ void ScenarioLoader::loadScenarios()
     lissajous(pathPts, dropConstraint);
     Scenario lissajous_Scenario(scenarioLabel, pathPts, dropConstraint);
     m_scenarios.push_back(lissajous_Scenario);
+
+    scenarioLabel = "teleop_trace";
+    pathPts.clear();
+    dropConstraint.clear();
+    teleop_trace(pathPts, dropConstraint);
+    Scenario teleop_trace_Scenario(scenarioLabel, pathPts, dropConstraint);
+    m_scenarios.push_back(teleop_trace_Scenario);
 }
 
 ScenarioLoader::Scenario & ScenarioLoader::getScenario(QString scenarioLabel)
@@ -245,6 +254,33 @@ void ScenarioLoader::lissajous(std::vector<Eigen::Matrix4d> & pathPts, std::vect
 
     return;
 }
+
+void ScenarioLoader::teleop_trace(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint)
+{
+    std::ifstream matrixDataFile("../../output/trace.csv");
+    std::string matrixStr, matrixEntry;
+    int count = 0;
+    Eigen::Matrix4d target;
+
+    while (getline(matrixDataFile, matrixStr, '\n')) // here we read a row by row of matrixDataFile and store every line into the string variable matrixRowString
+    {
+        std::stringstream matrixRowStringStream(matrixStr); //convert matrixRowString that is a string to a stream variable.
+        target = Eigen::Matrix4d::Identity();
+        int index = 0;
+        while (getline(matrixRowStringStream, matrixEntry, ',')) // here we read pieces of the stream matrixRowStringStream until every comma, and store the resulting character into the matrixEntry
+        {
+            int row = index / 4;
+            int col = index % 4;
+            target(row, col) = stod(matrixEntry);  //here we convert the string to double and fill in the row vector storing all the matrix entries
+            index++;
+        }
+        pathPts.push_back(target);
+        dropConstraint.push_back(false);
+        count++;
+    }
+//    qDebug() << "Trace total: " << count << " points";
+}
+
 
 // Scenario Objects
 

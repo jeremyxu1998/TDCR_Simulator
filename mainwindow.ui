@@ -569,6 +569,11 @@ First segment:</string>
            <string>lissajous</string>
           </property>
          </item>
+         <item>
+          <property name="text">
+           <string>teleop_trace</string>
+          </property>
+         </item>
         </widget>
        </item>
        <item>
