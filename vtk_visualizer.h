@@ -101,7 +101,9 @@ private:
     public:
         PathVisual( std::vector<Eigen::Matrix4d> pathPts, 
                     std::vector<bool> dropConstraint,
-                    bool showConstraints);
+                    bool showConstraints,
+                    double radius,
+                    double r=0.0, double g=0.0, double b=0.0);
         
         vtkSmartPointer<vtkParametricSpline> pathSpline;
         vtkSmartPointer<vtkParametricFunctionSource> pathFunctionSource;
@@ -124,6 +126,7 @@ public:
 
     void showPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<bool> dropConstraint, bool showConstraints);
     void clearPath();
+    void showMeasuredPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<bool> dropConstraint);
 
 private:
     int numRobots;
@@ -134,6 +137,7 @@ private:
     std::vector<PointConstraintVisual> pointsVisual;
 
     PathVisual* pathVisual;
+    PathVisual* measuredPathVisual;
 };
 
 #endif // VTK_VISUALIZER_H

@@ -42,6 +42,13 @@ void ScenarioLoader::loadScenarios()
     deploy_2(pathPts, dropConstraint);
     Scenario deploy_2_Scenario(scenarioLabel, pathPts, dropConstraint);
     m_scenarios.push_back(deploy_2_Scenario);
+
+    scenarioLabel = "lissajous";
+    pathPts.clear();
+    dropConstraint.clear();
+    lissajous(pathPts, dropConstraint);
+    Scenario lissajous_Scenario(scenarioLabel, pathPts, dropConstraint);
+    m_scenarios.push_back(lissajous_Scenario);
 }
 
 ScenarioLoader::Scenario & ScenarioLoader::getScenario(QString scenarioLabel)
@@ -147,14 +154,15 @@ void ScenarioLoader::deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
         target.topLeftCorner(3, 3) = rot * target.topLeftCorner(3, 3);
 
         pathPts.push_back(target);
-        if (count == 0) {
-            count = 500;
-            dropConstraint.push_back(true);
-        }
-        else {
-            count--;
-            dropConstraint.push_back(false);
-        }
+        dropConstraint.push_back(false);
+//        if (count == 0) {
+//            count = 500;
+//            dropConstraint.push_back(true);
+//        }
+//        else {
+//            count--;
+//            dropConstraint.push_back(false);
+//        }
     }
 
     return;
@@ -165,8 +173,8 @@ void ScenarioLoader::deploy_2(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
     //Simple looped path with height variation
     int steps = 1000;
     double amplitude = 0.01;
-    double dist = 0.01;
-    int count = 0;
+    double dist = 0.005;
+//    int count = 0;
 
     double tilt = 0;
     Eigen::Matrix4d tilt_matrix;
@@ -193,14 +201,46 @@ void ScenarioLoader::deploy_2(std::vector<Eigen::Matrix4d> & pathPts, std::vecto
         target.topLeftCorner(3, 3) = rot * target.topLeftCorner(3, 3);
 
         pathPts.push_back(target);
-        if (count == 0) {
-            count = 334;
-            dropConstraint.push_back(true);
-        }
-        else {
-            count--;
-            dropConstraint.push_back(false);
-        }
+        dropConstraint.push_back(false);
+//        if (count == 0) {
+//            count = 334;
+//            dropConstraint.push_back(true);
+//        }
+//        else {
+//            count--;
+//            dropConstraint.push_back(false);
+//        }
+    }
+
+    return;
+}
+
+void ScenarioLoader::lissajous(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint)
+{
+    //Simple looped path with height variation
+    int steps = 1000;
+    double amplitude = 0.01;
+//    double dist = 0.005;
+//    int count = 0;
+
+    double tilt = M_PI/6;
+    Eigen::Matrix4d tilt_matrix;
+    tilt_matrix << std::cos(tilt), 0, std::sin(tilt), 0,
+                    0, 1, 0, 0,
+                    -std::sin(tilt), 0, std::cos(tilt), 0,
+                    0, 0, 0, 1;
+
+    for(double theta = 0; theta <= 2*M_PI; theta += 2*M_PI/steps) {
+        Eigen::Matrix4d target = Eigen::Matrix4d::Identity();
+
+        target(0,3) += amplitude * (std::sin(theta + M_PI / 2.0) - 1.0);
+        target(1,3) += amplitude * std::sin(2 * theta);
+//        target(2,3) += dist*theta;
+
+        target = tilt_matrix*target;
+
+        pathPts.push_back(target);
+        dropConstraint.push_back(false);
     }
 
     return;

@@ -146,7 +146,7 @@ void VtkVisualizer::showPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<b
     if (pathVisual != nullptr) {
         clearPath();
     }
-    pathVisual = new PathVisual(pathPts, dropConstraint, showConstraints);
+    pathVisual = new PathVisual(pathPts, dropConstraint, showConstraints, 2e-4, 0.8);
 
     for (int i = 0; i < pathVisual->pointActors.size(); i++) {
         renderer->AddActor(pathVisual->pointActors[i]);
@@ -167,6 +167,17 @@ void VtkVisualizer::clearPath()
 
         renderWindow->Render();
     }
+}
+
+void VtkVisualizer::showMeasuredPath(std::vector<Eigen::Matrix4d> pathPts, std::vector<bool> dropConstraint)
+{
+    measuredPathVisual = new PathVisual(pathPts, dropConstraint, false, 1e-4, 0.0, 0.0, 0.8);
+
+    for (int i = 0; i < measuredPathVisual->pointActors.size(); i++) {
+        renderer->AddActor(measuredPathVisual->pointActors[i]);
+    }
+    renderer->AddActor(measuredPathVisual->pathActor);
+    renderWindow->Render();
 }
 
 // TACRVisual
@@ -424,7 +435,9 @@ void VtkVisualizer::PointConstraintVisual::updateColor(bool selected)
 
 VtkVisualizer::PathVisual::PathVisual(  std::vector<Eigen::Matrix4d> pathPts, 
                                         std::vector<bool> dropConstraint,
-                                        bool showConstraints)
+                                        bool showConstraints,
+                                        double radius,
+                                        double r, double g, double b)
 {
     pathSpline = vtkSmartPointer<vtkParametricSpline>::New();
     pathFunctionSource = vtkSmartPointer<vtkParametricFunctionSource>::New();
@@ -432,14 +445,14 @@ VtkVisualizer::PathVisual::PathVisual(  std::vector<Eigen::Matrix4d> pathPts,
     // Create a tube (cylinder) around the spline
     pathTubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
     pathTubeFilter->SetInputConnection(pathFunctionSource->GetOutputPort());
-    pathTubeFilter->SetRadius(0.5e-3);
-    pathTubeFilter->SetNumberOfSides(50);
+    pathTubeFilter->SetRadius(radius);
+    pathTubeFilter->SetNumberOfSides(20);
 
     pathMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     pathMapper->SetInputConnection(pathTubeFilter->GetOutputPort());
     pathActor = vtkSmartPointer<vtkActor>::New();
     pathActor->SetMapper(pathMapper);
-    pathActor->GetProperty()->SetColor(0.8, 0.0, 0.0);
+    pathActor->GetProperty()->SetColor(r, g, b);
 
     vtkNew<vtkPoints> pathPoints;
     for (int i = 0; i < pathPts.size(); i++) {

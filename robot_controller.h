@@ -13,10 +13,10 @@ public:
     BaseController(int freq);
     ~BaseController();
 
-    bool PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, const Eigen::Matrix4d & T_target,
+    bool PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, Eigen::Matrix4d noiseMat, const Eigen::Matrix4d & T_target,
                         Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength);
     
-    void ComputePathErrors(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, const Eigen::Matrix4d & T_target, double tElapsed,
+    void ComputePathErrors(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, Eigen::Matrix4d & tipPoseNoise, const Eigen::Matrix4d & T_target, double tElapsed,
                             double & pErr, double & oErr, double & pConErr, double & oConErr);
 
 private:

@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <thread>
+#include <random>
 #include <stdlib.h>
 #include <QFileDialog>
 #include <QKeyEvent>
@@ -23,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
     installEventFilter(this);  // Overload eventFilter to capture enter key
 
     // Robot initialization
-    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../robot_configurations/", tr("XML files (*.xml)"));
+    QString xmlDir = QFileDialog::getOpenFileName(this, tr("Choose robot config file"), "../../robot_configurations/", tr("XML files (*.xml)"));
     if (xmlDir.isEmpty()) {
         QMessageBox::critical(this, "Error", "Robot config file load failed: Invalid input directory. Please restart program.");
         return;
@@ -372,6 +373,7 @@ void MainWindow::on_controlButton_clicked()
     int robotId = 0;
     bool useConstr = ui->constraintCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
     bool useFullPose = ui->fullPoseCheckBox->isChecked(); // Not recommended - inherits from QAbstractButton class
+    bool useNoise = ui->noiseCheckBox->isChecked();
     Eigen::MatrixXd tendonLengthFrame;  // Config info returned from controller, for one robot
     Eigen::VectorXd segLengthFrame;
     std::vector<std::vector<Eigen::Matrix4d>> allDisksPose;  // For multiple robots (legacy reason)
@@ -382,22 +384,22 @@ void MainWindow::on_controlButton_clicked()
     xPlot->data()->clear();
     yPlot->data()->clear();
     zPlot->data()->clear();
-    UpdatePosePlot(0.0, initialTipPose);
+//    UpdatePosePlot(0.0, initialTipPose);
 
     double pConErr = 0;
     double avgPConErr = 0;
     double oConErr = 0;
     double avgOConErr = 0;
     double pErr = 0;
-    double avgPErr = 0;
+    double rmsPErr = 0;
     double oErr = 0;
-    double avgOErr = 0;
+    double rmsOErr = 0;
 
     pErrPlot->data()->clear();
     pConErrPlot->data()->clear();
     oErrPlot->data()->clear();
     oConErrPlot->data()->clear();
-    UpdateErrPlot(0.0, 0, 0, 0, 0);
+    // UpdateErrPlot(0.0, 0, 0, 0, 0);
 
     QString currentScenario = ui->scenarioList->currentItem()->text();
 
@@ -408,7 +410,7 @@ void MainWindow::on_controlButton_clicked()
         for (int frameCount = 0; frameCount < maxFrameNum; frameCount++) {
             // for (int robot_count = 0; robot_count < robots.size(); robot_count++) {  // TODO: multiple robots support, not in plan for now
             // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
-            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
+            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, Eigen::Matrix4d::Identity(), targetTipPose, tendonLengthFrame, segLengthFrame);
             allDisksPose.clear();
             robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
             allDisksPose.emplace_back(robots[0].GetAllDisksPose());
@@ -442,11 +444,19 @@ void MainWindow::on_controlButton_clicked()
         timer.start();
         double lastTime = 0.0;
 
+        std::vector<double> PErrorList, OErrorList;
+        Eigen::Matrix4d noiseMat = Eigen::Matrix4d::Identity();
+        std::vector<Eigen::Matrix4d> noisePath;
+        std::default_random_engine generator;
+        std::normal_distribution<double> posDistr(0.0, 0.44e-3);
+        std::normal_distribution<double> oriDistr(0.0, 0.24);
+
         for (int frameCount = 0; frameCount < pathPts.size(); frameCount++) {
             Eigen::Matrix4d targetTipPose = pathPts[frameCount];
 
             // TODO: when switching to real robot, use pose instead of config as arguments, and use measured instead of FK calculated value
-            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, targetTipPose, tendonLengthFrame, segLengthFrame);
+            bool reachTarget = controller->PathPlanningUpdate(robots[0], robotId, useFullPose, useConstr, noiseMat, targetTipPose,
+                                                    tendonLengthFrame, segLengthFrame);
             allDisksPose.clear();
             robots[0].SetTendonLength(tendonLengthFrame, segLengthFrame);
             allDisksPose.emplace_back(robots[0].GetAllDisksPose());
@@ -454,11 +464,38 @@ void MainWindow::on_controlButton_clicked()
             double curTime = timer.elapsed();
             double tElapsed = curTime - lastTime;
 
-            controller->ComputePathErrors(robotId, allDisksPose[0], targetTipPose, tElapsed, pErr, oErr, pConErr, oConErr);
-            avgPErr += pErr;
-            avgOErr += oErr;
-            avgPConErr += pConErr;
-            avgOConErr += oConErr;
+            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();
+            // Generate measurement noise
+            if (useNoise) {
+                noiseMat = Eigen::Matrix4d::Identity();
+                for (int pos_coord = 0; pos_coord < 3; pos_coord++) {
+                    double rand_num = posDistr(generator);
+                    noiseMat(pos_coord, 3) += rand_num;
+                }
+                double rollNoise = oriDistr(generator) * M_PI / 180.0;
+                Eigen::AngleAxisd rollAngle(rollNoise, Eigen::Vector3d::UnitZ());
+                double yawNoise = oriDistr(generator) * M_PI / 180.0;
+                Eigen::AngleAxisd yawAngle(yawNoise, Eigen::Vector3d::UnitY());
+                double pitchNoise = oriDistr(generator) * M_PI / 180.0;
+                Eigen::AngleAxisd pitchAngle(pitchNoise, Eigen::Vector3d::UnitX());
+                Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+                Eigen::Matrix3d oriNoiseRotationMatrix = q.matrix();
+//                std::stringstream ss;
+//                ss << oriNoiseRotationMatrix;
+//                qDebug() << QString::fromStdString(ss.str());
+                noiseMat.topLeftCorner(3,3) = oriNoiseRotationMatrix;
+                curTipPose *= noiseMat;
+            }
+            noisePath.push_back(curTipPose);
+
+            controller->ComputePathErrors(robotId, allDisksPose[0], curTipPose, targetTipPose, tElapsed, pErr, oErr, pConErr, oConErr);
+            // Compute RMS
+            PErrorList.push_back(pErr);
+            OErrorList.push_back(oErr);
+            rmsPErr += pErr * pErr;
+            rmsOErr += oErr * oErr;
+            // avgPConErr += pConErr * pConErr;
+            // avgOConErr += oConErr * oConErr;
 
             visualizer->UpdateVisualization(allDisksPose);
             ui->progressBar->setValue((int) 100 * frameCount / pathPts.size());
@@ -470,9 +507,17 @@ void MainWindow::on_controlButton_clicked()
 
             QCoreApplication::processEvents();  // Notify Qt to update the widget
 
-            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
-            UpdatePosePlot(curTime / 1000, curTipPose);
-            UpdateErrPlot(curTime / 1000, pErr, pConErr, oErr, oConErr);
+//            Eigen::Matrix4d curTipPose = robots[0].GetTipPose();  // when switching to real robot, use measured instead of FK calculated value
+
+            if (frameCount > 20) {
+                UpdatePosePlot(curTime / 1000, curTipPose);
+                if (useNoise) {
+                    UpdateErrPlot(frameCount + 1, pErr, 0.88e-3, oErr, 0.48 * M_PI / 180.0, true);
+                }
+                else {
+                    UpdateErrPlot(frameCount + 1, pErr, pConErr, oErr, oConErr, false);
+                }
+            }
             lastTime = curTime;
 
             // double frameInterval = 1.0 / static_cast<double>(frameFreq);  // In seconds
@@ -482,12 +527,37 @@ void MainWindow::on_controlButton_clicked()
             // std::this_thread::sleep_for(std::chrono::milliseconds(1000/frameFreq));  // Sleep length depending on update frequency
         }
 
-        avgPErr = 1000 * avgPErr / pathPts.size();
-        qDebug() << "Average Path Error: " << avgPErr;
-        avgOErr = avgOErr / pathPts.size();
-        qDebug() << "Average Path Orientation Error: " << avgOErr;
-        avgPConErr = 1000 * avgPConErr / pathPts.size();
-        qDebug() << "Average Constraint Error: " << avgPConErr;
+        visualizer->showMeasuredPath(noisePath, dropConstraint);
+        QCoreApplication::processEvents();
+
+        // Output RMS and standard deviation
+        rmsPErr = 1000 * sqrt(rmsPErr / pathPts.size());
+        qDebug() << "RMS Path Error: " << rmsPErr;
+        double avgPErr = std::accumulate(PErrorList.begin(), PErrorList.end(), 0.0) / pathPts.size();
+//        double squaredSum = std::inner_product(PErrorList.begin(), PErrorList.end(), PErrorList.begin(), 0.0);
+//        double StdPErr = std::sqrt(squaredSum / pathPts.size() - avgPErr * avgPErr);
+        double squaredSumPErr = 0.0;
+        for (int i = 0; i < pathPts.size(); ++i) {
+            squaredSumPErr += (PErrorList[i] - avgPErr) * (PErrorList[i] - avgPErr);
+        }
+        double StdPErr = sqrt(squaredSumPErr / pathPts.size());
+        qDebug() << "Standard Deviation Path Error: " << StdPErr;
+
+        rmsOErr = 180.0 / M_PI * sqrt(rmsOErr / pathPts.size());
+        qDebug() << "RMS Path Orientation Error: " << rmsOErr;
+        double avgOErr = std::accumulate(OErrorList.begin(), OErrorList.end(), 0.0) / pathPts.size();
+        double squaredSumOErr = 0.0;
+        for (int i = 0; i < pathPts.size(); ++i) {
+            squaredSumOErr += (OErrorList[i] - avgOErr) * (OErrorList[i] - avgOErr);
+        }
+        double StdOErr = sqrt(squaredSumOErr / pathPts.size());
+        qDebug() << "Standard Deviation Path Orientation Error: " << StdOErr;
+
+        // avgPConErr = 1000 * avgPConErr / pathPts.size();
+        // qDebug() << "Average Constraint Error: " << avgPConErr;
+
+        QString pngDir = QString("../../output/") + scenarioLoader->getScenario(currentScenario).getLabel() + QString(".png");
+        errPlot.savePng(pngDir);
         // avgOConErr = avgOConErr / pathPts.size(); // Not currently tracking orientation error for constraints
     }
 
@@ -736,27 +806,29 @@ void MainWindow::UpdatePosePlot(double t, Eigen::Matrix4d pose)
 
 void MainWindow::InitErrPlot()
 {
-    errPlot.resize(1000, 600);
+    errPlot.resize(1200, 400);
     errPlot.plotLayout()->clear();  // Clear default axis rect and start from scratch
     pErrAxes = new QCPAxisRect(&errPlot);
     oErrAxes = new QCPAxisRect(&errPlot);
     errPlot.plotLayout()->addElement(0, 0, pErrAxes);
-    errPlot.plotLayout()->addElement(1, 0, oErrAxes);
+    errPlot.plotLayout()->addElement(0, 1, oErrAxes);
 
     pErrPlot = errPlot.addGraph(pErrAxes->axis(QCPAxis::atBottom), pErrAxes->axis(QCPAxis::atLeft));
-    pErrPlot->setPen(QPen(Qt::red));
+    pErrPlot->setPen(QPen(Qt::blue));
     pConErrPlot = errPlot.addGraph(pErrAxes->axis(QCPAxis::atBottom), pErrAxes->axis(QCPAxis::atLeft));
-    pConErrPlot->setPen(QPen(Qt::blue));
-    pErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
+    pConErrPlot->setPen(QPen(Qt::green));
+    pConErrPlot->setBrush(QColor(0, 200, 50, 40));
+    pErrAxes->axis(QCPAxis::atBottom)->setLabel("Iterations");
     pErrAxes->axis(QCPAxis::atLeft)->setLabel("Position Error (mm)");
     pErrAxes->axis(QCPAxis::atLeft)->setRange(0, 35);
 
     oErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
-    oErrPlot->setPen(QPen(Qt::red));
+    oErrPlot->setPen(QPen(Qt::blue));
     oConErrPlot = errPlot.addGraph(oErrAxes->axis(QCPAxis::atBottom), oErrAxes->axis(QCPAxis::atLeft));
-    oConErrPlot->setPen(QPen(Qt::blue));
-    oErrAxes->axis(QCPAxis::atBottom)->setLabel("t (s)");
-    oErrAxes->axis(QCPAxis::atLeft)->setLabel("Required Screw Axis Twist (rad/s)");
+    oConErrPlot->setPen(QPen(Qt::green));
+    oConErrPlot->setBrush(QColor(0, 200, 50, 40));
+    oErrAxes->axis(QCPAxis::atBottom)->setLabel("Iterations");
+    oErrAxes->axis(QCPAxis::atLeft)->setLabel("Rotation Error (deg)");
     oErrAxes->axis(QCPAxis::atLeft)->setRange(0, 2);
 }
 
@@ -766,18 +838,20 @@ void MainWindow::DeleteErrPlot()
     delete oErrAxes;
 }
 
-void MainWindow::UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr)
+void MainWindow::UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr, bool useNoise)
 {
     pErrPlot->addData(t, pErr * 1000.0);
     // pErrPlot->rescaleAxes();
-    pConErrPlot->addData(t, pConErr * 1000.0);
-    // pConErrPlot->rescaleAxes(true);
-    pErrAxes->axis(QCPAxis::atBottom)->rescale();
-    oErrPlot->addData(t, oErr);
+    if (useNoise)
+        pConErrPlot->addData(t, pConErr * 1000.0);
+    pErrPlot->rescaleAxes();
+    // pErrAxes->axis(QCPAxis::atBottom)->rescale();
+    oErrPlot->addData(t, oErr * 180.0 / M_PI);
     // oErrPlot->rescaleAxes();
-    oConErrPlot->addData(t, oConErr);
-    // oConErrPlot->rescaleAxes(true);
-    oErrAxes->axis(QCPAxis::atBottom)->rescale();
+    if (useNoise)
+        oConErrPlot->addData(t, oConErr * 180.0 / M_PI);
+    oErrPlot->rescaleAxes();
+    // oErrAxes->axis(QCPAxis::atBottom)->rescale();
 
     errPlot.replot();
 }

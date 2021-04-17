@@ -12,9 +12,9 @@ BaseController::BaseController(int freq)
     taskWeightConstraint = 2000;
     secondTaskWeightTendon = 0.1;
     secondTaskWeightBbone = 0.05;
-    PGain = 0.05;
+    PGain = 0.1;
     IGain = 1;
-    OGain = 0.05;
+    OGain = 0.1;
     posAccuReq = 0.1e-3;
     oriAccuReq = 0.05;  // rad
 
@@ -26,11 +26,12 @@ BaseController::~BaseController()
 {
 }
 
-bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, const Eigen::Matrix4d & T_target,
+bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool useFullPoseControl, bool useConstraints, Eigen::Matrix4d noiseMat, const Eigen::Matrix4d & T_target,
                                     Eigen::MatrixXd & framesTendonLengthChange, Eigen::VectorXd & framesSegLength)
 {
     std::vector<Eigen::Matrix4d> curDisksPose = robot.GetAllDisksPose();
     Eigen::Matrix4d T_init = curDisksPose.back();  // Initial transformation
+    T_init *= noiseMat;
     Eigen::Matrix3d R_target = T_target.topLeftCorner(3,3);
     Eigen::Vector3d p_target = T_target.topRightCorner(3,1);
 
@@ -177,21 +178,21 @@ bool BaseController::PathPlanningUpdate(TendonRobot & robot, int robotId, bool u
         curDisksPose = robot.CalcAllDisksPose(curTendonLengthChange, curSegLength);
         T_cur = curDisksPose.back();
 
-        Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
-        Eigen::Matrix3d rotDiff = T_cur.topLeftCorner(3,3).transpose() * R_target;
-        double angleDiff = acos(std::max(std::min((rotDiff.trace() - 1) / 2.0, 1.0), -1.0));
-        if (useFullPoseControl) {
-            if ((p_target - p_cur).norm() < posAccuReq && angleDiff < oriAccuReq) {
-                reachTarget = true;
-                break;
-            }
-        }
-        else {
-            if ((p_target - p_cur).norm() < posAccuReq) {
-                reachTarget = true;
-                break;
-            }
-        }
+//        Eigen::Vector3d p_cur = T_cur.topRightCorner(3,1);
+//        Eigen::Matrix3d rotDiff = T_cur.topLeftCorner(3,3).transpose() * R_target;
+//        double angleDiff = acos(std::max(std::min((rotDiff.trace() - 1) / 2.0, 1.0), -1.0));
+//        if (useFullPoseControl) {
+//            if ((p_target - p_cur).norm() < posAccuReq && angleDiff < oriAccuReq) {
+//                reachTarget = true;
+//                break;
+//            }
+//        }
+//        else {
+//            if ((p_target - p_cur).norm() < posAccuReq) {
+//                reachTarget = true;
+//                break;
+//            }
+//        }
     }
     framesTendonLengthChange = curTendonLengthChange;
     framesSegLength = curSegLength;
@@ -286,22 +287,25 @@ void BaseController::RoundValues(Eigen::VectorXd & vals, double precision)
     }
 }
 
-void BaseController::ComputePathErrors(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, const Eigen::Matrix4d & T_target, double tElapsed,
+void BaseController::ComputePathErrors(int robotId, const std::vector<Eigen::Matrix4d> & curDisksPose, Eigen::Matrix4d & tipPoseNoise, const Eigen::Matrix4d & T_target, double tElapsed,
                             double & pErr, double & oErr, double & pConErr, double & oConErr)
 {
-    Eigen::Matrix4d curTipPose = curDisksPose.back();
+    Eigen::Matrix4d curTipPose = tipPoseNoise;
     pErr = (T_target.topRightCorner(3, 1) - curTipPose.topRightCorner(3, 1)).norm();
     pConErr = calcConstraintsCost(robotId, curDisksPose, false);
     
-    // Orientation Error: using matrix log formulation to get necessary twist between poses
-    Eigen::Matrix4d T_body_required = InverseTF(curTipPose) * T_target;
-    double theta;
-    Eigen::Matrix4d S_skew = MatrixLog(T_body_required, theta);
-    Eigen::VectorXd omega(3);
-    omega << S_skew(2,1), S_skew(0,2), S_skew(1,0);  // omega components
-    omega *= theta;  // S is normalized, multiply by theta to get twist
-    // double timeInterval = (tElapsed / 1000) / (calcFreq / updateFreq);
-    oErr = omega.norm(); // (timeInterval * omega).norm();
+    // // Orientation Error: using matrix log formulation to get necessary twist between poses
+    // Eigen::Matrix4d T_body_required = InverseTF(curTipPose) * T_target;
+    // double theta;
+    // Eigen::Matrix4d S_skew = MatrixLog(T_body_required, theta);
+    // Eigen::VectorXd omega(3);
+    // omega << S_skew(2,1), S_skew(0,2), S_skew(1,0);  // omega components
+    // omega *= theta;  // S is normalized, multiply by theta to get twist
+    // // double timeInterval = (tElapsed / 1000) / (calcFreq / updateFreq);
+    // oErr = omega.norm(); // (timeInterval * omega).norm();
+
+    Eigen::Matrix3d rotDiff = curTipPose.topLeftCorner(3,3).transpose() * T_target.topLeftCorner(3,3);
+    oErr = acos(std::max(std::min((rotDiff.trace() - 1) / 2.0, 1.0), -1.0));
 
     oConErr = 0; // In current formulation, not tracking/using orientation errors for the constraints
 }

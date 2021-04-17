@@ -512,6 +512,13 @@ First segment:</string>
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="noiseCheckBox">
+         <property name="text">
+          <string>Noise</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="scenarioLabel">
          <property name="text">
           <string>Scenario Selection</string>
@@ -555,6 +562,11 @@ First segment:</string>
          <item>
           <property name="text">
            <string>deploy_2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>lissajous</string>
           </property>
          </item>
         </widget>

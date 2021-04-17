@@ -16,6 +16,7 @@ public:
     void loop_2(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint);
     void deploy_1(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint);
     void deploy_2(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint);
+    void lissajous(std::vector<Eigen::Matrix4d> & pathPts, std::vector<bool> & dropConstraint);
 
 private:
     class Scenario

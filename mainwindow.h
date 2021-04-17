@@ -83,6 +83,6 @@ private:
     // Error Pose Plotting
     void InitErrPlot();
     void DeleteErrPlot();
-    void UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr);
+    void UpdateErrPlot(double t, double pErr, double pConErr, double oErr, double oConErr, bool useNoise);
 };
 #endif // MAINWINDOW_H
