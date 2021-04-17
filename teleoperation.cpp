@@ -2,6 +2,7 @@
 #include "ui_teleoperation.h"
 
 #include <QDebug>
+#include <fstream>
 
 TeleoperationWidget::TeleoperationWidget(QWidget *parent) :
     QDockWidget(parent),
@@ -59,7 +60,7 @@ TACRTeleoperation::TACRTeleoperation(TendonRobot &r, VtkVisualizer *visualizer)
     m_looping = false;
     m_enabled = false;
     m_scaling = 0.5;
-    m_frameFreq = 10;  // Hz
+    m_frameFreq = 100;  // Hz
     m_PGainTendon = 10;  // Need higher gain for teleoperation compared with tip pose control
     m_PGainBbone = 60;
     pController = new BaseController(m_frameFreq, m_PGainTendon, m_PGainBbone);
@@ -156,42 +157,58 @@ void TACRTeleoperation::MainLoop()
 {
     emit sgn_startTeleoperateToDev(true);
     int iterTimeLength = 1000 / m_frameFreq;
+
+    Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "", "\n");
+    ofstream file("../../output/trace.csv");
+
     while (m_looping) {
         if (pInputDevice != nullptr && m_enabled) {  // Clutched in
             QElapsedTimer timer;
             timer.start();
 
-            // qDebug() << "Motion:";
-            curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
-            prevRobotFrameGlobal = robot.GetTipPose();
-            // std::stringstream ss;
-            // ss << curMasterFrame;
-            // qDebug() << QString::fromStdString(ss.str());
-            robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
-            robotFrameDelta.topRightCorner(3,1) *= m_scaling;  // TODO: rotation scaling option
-            // ss << robotFrameDelta;
-            // qDebug() << QString::fromStdString(ss.str());
-            targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
-            bool reachTarget = pController->PathPlanningUpdate(robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
-            if (reachTarget)
-                qDebug() << "reach position";
-            else
-                qDebug() << "not reach position";
+//            // qDebug() << "Motion:";
+//            curMasterFrame = pInputDevice->GetLastFrame();  // Latest input
+//            prevRobotFrameGlobal = robot.GetTipPose();
+//            // std::stringstream ss;
+//            // ss << curMasterFrame;
+//            // qDebug() << QString::fromStdString(ss.str());
+//            robotFrameDelta = prevMasterFrame.inverse() * curMasterFrame;
+//            robotFrameDelta.topRightCorner(3,1) *= m_scaling;  // TODO: rotation scaling option
+//            // ss << robotFrameDelta;
+//            // qDebug() << QString::fromStdString(ss.str());
+//            targetRobotFrameGlobal = prevRobotFrameGlobal * robotFrameDelta;
+//            bool reachTarget = pController->PathPlanningUpdate(robot, targetRobotFrameGlobal, tendonLengthFrame, segLengthFrame);
+//            if (reachTarget)
+//                qDebug() << "reach position";
+//            else
+//                qDebug() << "not reach position";
 
-            allDisksPose.clear();
-            robot.SetTendonLength(tendonLengthFrame, segLengthFrame);
-            allDisksPose.emplace_back(robot.GetAllDisksPose());
-            pVisualizer->UpdateVisualization(allDisksPose);
-            QCoreApplication::processEvents();  // Notify Qt to update the widget
+//            allDisksPose.clear();
+//            robot.SetTendonLength(tendonLengthFrame, segLengthFrame);
+//            allDisksPose.emplace_back(robot.GetAllDisksPose());
+//            pVisualizer->UpdateVisualization(allDisksPose);
+//            QCoreApplication::processEvents();  // Notify Qt to update the widget
 
-            prevMasterFrame = curMasterFrame;
+//            prevMasterFrame = curMasterFrame;
+
+            curMasterFrame = pInputDevice->GetLastFrame();
+            if (file.is_open()) {
+                file << curMasterFrame.format(CSVFormat);
+//                std::stringstream ss;
+//                ss << curMasterFrame;
+//                qDebug() << QString::fromStdString(ss.str());
+            }
+            else {
+                qDebug() << "File open failure";
+            }
 
             int iterProcTime = timer.elapsed();
-            qDebug() << "Iteration processed in " << iterProcTime << " msec";
+//            qDebug() << "Iteration processed in " << iterProcTime << " msec";
             QTest::qWait(std::max(iterTimeLength - iterProcTime, 0));
         }
         else {  // Idle
             QTest::qWait(iterTimeLength);
         }
     }
+    file.close();
 }
