@@ -541,7 +541,7 @@ void MainWindow::on_controlButton_clicked()
             squaredSumPErr += (PErrorList[i] - avgPErr) * (PErrorList[i] - avgPErr);
         }
         double StdPErr = sqrt(squaredSumPErr / pathPts.size());
-        qDebug() << "Standard Deviation Path Error: " << StdPErr;
+        qDebug() << "Standard Deviation Path Error: " << 1000 * StdPErr;
 
         rmsOErr = 180.0 / M_PI * sqrt(rmsOErr / pathPts.size());
         qDebug() << "RMS Path Orientation Error: " << rmsOErr;
@@ -551,7 +551,7 @@ void MainWindow::on_controlButton_clicked()
             squaredSumOErr += (OErrorList[i] - avgOErr) * (OErrorList[i] - avgOErr);
         }
         double StdOErr = sqrt(squaredSumOErr / pathPts.size());
-        qDebug() << "Standard Deviation Path Orientation Error: " << StdOErr;
+        qDebug() << "Standard Deviation Path Orientation Error: " << 180.0 / M_PI * StdOErr;
 
         // avgPConErr = 1000 * avgPConErr / pathPts.size();
         // qDebug() << "Average Constraint Error: " << avgPConErr;
